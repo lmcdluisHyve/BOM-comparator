@@ -1,0 +1,19 @@
+[{
+    "id": "assetFile",
+    "title": "Asset File RB",
+    "icon": "bi bi-hdd-rack",
+    "url": "components/tabs/assetFile.html"
+  },
+  {
+    "id": "importarExcel",
+    "title": "BOM Comparator",
+    "icon": "bi bi-shuffle",
+    "url": "components/tabs/bom.html"
+  },
+  {
+    "id": "otherTools",
+    "title": "Other Tools",
+    "icon": "bi bi-wrench-adjustable-circle",
+    "url": "components/tabs/otherTools.html"
+  }
+]

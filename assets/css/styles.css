@@ -1,0 +1,99 @@
+.main-navbar{
+background: rgba(255, 255, 255, 0.56);
+box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+-webkit-backdrop-filter: blur(9.4px);
+backdrop-filter: blur(9.4px);
+border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Estilos de los pasos */
+.step {
+  flex: 1;
+  text-align: center;
+  font-weight: 600;
+  color: #6c757d;
+  position: relative;
+  z-index: 1;
+}
+
+/* Línea de conexión detrás de los pasos */
+.step::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background-color: #dee2e6;
+  transform: translateY(-50%);
+  z-index: -1;
+}
+
+.step:first-child::before {
+  left: 50%;
+}
+
+.step:last-child::before {
+  right: 50%;
+}
+
+/* Paso activo */
+.step.active {
+  color: #0d6efd;
+}
+
+/* Paso completado */
+.step.completed {
+  color: #198754;
+}
+
+/* Barra de conexión animada */
+.progress-steps {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 4px;
+  background-color: #0d6efd;
+  transform: translateY(-50%);
+  z-index: 0;
+  transition: width 0.5s ease;
+  width: 0%;
+}
+
+/* Contenido de pasos */
+.step-content {
+  display: none;
+}
+.step-content.active {
+  display: block;
+}
+
+.file-input-container {
+  border: 2px dashed #6c757d;
+  border-radius: 5px;
+  padding: 30px;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+.file-input-container:hover {
+  background-color: #e9e9e9;
+  border-color: #f0f8ff;
+}
+
+#excelTable {
+  margin-top: 30px;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+#excelTable th, #excelTable td {
+  border: 1px solid #dee2e6;
+  padding: 8px;
+}
+
+#excelTable th {
+  background-color: #666666;
+  color: #fff;
+}
