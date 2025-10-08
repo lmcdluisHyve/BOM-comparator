@@ -228,7 +228,6 @@ $(document).ready(function () {
   $("#viewTabContent").load(
     "/components/tabs/assetFile.html",
     function (response, status, xhr) {
-      const $table = $("#mappedTable");
       initWizard(); // Inicializa el wizard solo cuando el HTML existe
 
       let excelData = []; // 🔹 Variable global disponible para otros steps
@@ -236,14 +235,7 @@ $(document).ready(function () {
       const $fileInput = $("#excelFile");
       const $fileName = $("#fileName");
       const $dropZone = $("#dropZone");
-
-      // Botón para abrir selector de archivo
-      $("#btnSelect").on("click", () => {
-        $fileInput.click();
-        if (fileInput.files.length > 0) {
-          $fileName.text(`📄 ${$fileInput.files[0].name}`);
-        }
-      });
+      const $btnSelect = $("#btnSelect");
 
       // Arrastrar y soltar archivo
       $dropZone
@@ -261,16 +253,33 @@ $(document).ready(function () {
           if (file) handleFile(file);
         });
 
+      // Botón para abrir selector de archivo
+      $(document).on("click", "#btnSelect", function (e) {
+        e.preventDefault();
+        const $wrapper = $(this).closest("file-input-container");
+        const $fileInput = $wrapper.find(".file-input");
+        if ($fileInput.length === 0) {
+          console.error("No se encontró el input de archivo.");
+          return;
+        }
+        $fileInput.click();
+      });
+
       // Selección normal de archivo
-      $fileInput.on("change", function (e) {
-        const file = e.target.files[0];
-        if (file) handleFile(file);
+      $(document).on("change", "#fileInput1", function (e) {
+        const file = this.files[0];
+        if (file) {
+          $fileName.text(`📄 ${file.name}`); // muestra el nombre
+          handleFile(file); // aquí llamas a tu función
+        } else {
+          $fileName.text("Ningún archivo seleccionado");
+        }
       });
 
       // Leer el archivo Excel y guardarlo
-      function handleFile(file) {
+      function handleFile(files) {
         const reader = new FileReader();
-        $fileName.text(`📄 ${file.name}`);
+        $fileName.text(`📄 ${files.name}`);
 
         reader.onload = function (e) {
           const data = new Uint8Array(e.target.result);
@@ -287,7 +296,7 @@ $(document).ready(function () {
           sessionStorage.setItem("excelData", JSON.stringify(excelData));
         };
 
-        reader.readAsArrayBuffer(file);
+        reader.readAsArrayBuffer(files);
       }
 
       if ("step-content[data-step='2']") {
@@ -304,7 +313,15 @@ $(document).ready(function () {
 
           if (storedData.length === 0) {
             $table.html(
-              "<tr><td class='text-danger'>No hay datos cargados. Regresa al paso anterior.</td></tr>"
+              `<tr><td><div class="empty text-center my-5">
+  <div class="empty-icon">
+    <i class="bi bi-emoji-frown fs-4"></i>
+  </div>
+  <h4>No se encontro ningun dato asociado</h4>
+  <p class="empty-subtitle text-secondary">
+    Intenta cargar un archivo Excel en el paso anterior.
+  </p>
+</div></td></tr>`
             );
             return;
           }
@@ -363,23 +380,20 @@ $(document).ready(function () {
           const dataOrdered = [...storedData].sort(orderByFields);
 
           // 🔹 Cargamos JSON externo con categorías
-          let excelDataOnline = [];
-
           $.getJSON("/data/partNumbers.json")
             .done(function (data) {
-              excelDataOnline = data;
-              console.log("✅ Datos online cargados:", excelDataOnline);
+              const excelDataOnline = data;
 
-              // 🔹 Agregar columna "Category" desde el JSON externo
+              // 🔹 Combinar dataOrdered con categorías
               const dataWithCategory = dataOrdered.map((row) => {
-                const match = excelDataOnline.find(
-                  (item) =>
-                  {
-                    console.log("row",row, "item", item);
-                    String(item["Component PN"]).trim() ===
-                    String(row["PN Tag"]).trim()
-                  }
-                );
+                console.log('Buscando categoría para:', String(row["Component PN"]).trim());
+                const match = excelDataOnline.find((item) => {
+                  console.log('Comparando con:', String(item["PN Tag"]).trim());
+                  // compara Component PN de dataOrdered con PN Tag de excelDataOnline
+                  // return String(row["Component PN"]).trim() === String(item["PN Tag"]).trim();
+                    // String(row["Component PN"]).trim() ===
+                    // String(item["PN Tag"]).trim()
+                });
 
                 return {
                   ...row,
@@ -387,27 +401,15 @@ $(document).ready(function () {
                 };
               });
 
-              console.log("📊 Data con Category:", dataWithCategory);
-
-              // 🔹 Filtrar solo las columnas deseadas
-              const dataFiltrada = dataWithCategory.map((row) => {
-                const nuevoObjeto = {};
-                columnasDeseadas.forEach((col) => {
-                  nuevoObjeto[col] = row[col] ?? ""; // toma solo las columnas deseadas
-                });
-                return nuevoObjeto;
-              });
-
-              console.log("✅ Data filtrada:", dataFiltrada);
-
-              // 🔹 Renderizar la tabla solo con las columnas deseadas
+              console.log("Data combinada:", dataWithCategory);
+              // 🔹 Renderizar tabla
               let html = "<thead><tr>";
               columnasDeseadas.forEach((col) => {
                 html += `<th>${col}</th>`;
               });
               html += "</tr></thead><tbody>";
 
-              dataFiltrada.forEach((row) => {
+              dataWithCategory.forEach((row) => {
                 html += "<tr>";
                 columnasDeseadas.forEach((col) => {
                   html += `<td>${row[col] ?? ""}</td>`;
@@ -418,10 +420,10 @@ $(document).ready(function () {
               html += "</tbody>";
               $table.html(html);
 
-              // 🔹 (Opcional) Guardar data filtrada en sessionStorage
+              // 🔹 Guardar data combinada en sessionStorage
               sessionStorage.setItem(
                 "dataWithCategory",
-                JSON.stringify(dataFiltrada)
+                JSON.stringify(dataOrdered)
               );
             })
             .fail(function (jqxhr, textStatus, error) {
