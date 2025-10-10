@@ -455,62 +455,59 @@ $(document).ready(function () {
   }
 
   /* ========================= render + validación ============================ */
-  function renderScanForm() {
-    console.log("🟢 renderScanForm(): generando formularios...");
+function renderScanForm() {
+  const $scanDataFormRow = $("#scanDataFormRow");
+  $scanDataFormRow.empty();
 
-    const $scanDataFormRow = $("#scanDataFormRow");
-    $scanDataFormRow.empty();
-
-    const stored = localStorage.getItem("dataWithCategory");
-    if (!stored) {
-      $scanDataFormRow.html(`
+  const stored = localStorage.getItem("dataWithCategory");
+  if (!stored) {
+    $scanDataFormRow.html(`
       <div class="alert alert-warning text-center w-100">
         <i class="bi bi-exclamation-triangle me-2"></i>
         No se encontró información en localStorage (dataWithCategory).
       </div>
     `);
-      return;
-    }
+    return;
+  }
 
-    const data = JSON.parse(stored);
-    if (!Array.isArray(data) || data.length === 0) {
-      $scanDataFormRow.html(`
+  const data = JSON.parse(stored);
+  if (!Array.isArray(data) || data.length === 0) {
+    $scanDataFormRow.html(`
       <div class="alert alert-warning text-center w-100">
         No hay registros para renderizar.
       </div>
     `);
-      return;
-    }
+    return;
+  }
 
-    // campos fijos (solo estos se mostrarán)
-    const fields = ["Asset_Tag", "Comp S/N", "MAC0"];
+  const fields = ["Asset_Tag", "Comp S/N", "MAC0"];
 
-    data.forEach((record, index) => {
-      console.log(record);
-      const subLocText =
-        record["Sub Loc"] && record["Sub Loc"] !== "0"
-          ? ` - Sub Loc ${record["Sub Loc"]}`
-          : "";
-      // bloque por registro
-      const $formBlock = $(`
+  data.forEach((record, index) => {
+    const subLocText = record["Sub Loc"] && record["Sub Loc"] !== "0"
+      ? ` - Sub Loc ${record["Sub Loc"]}` : "";
+
+    const $formBlock = $(`
       <div class="rounded p-3 mb-4 bg-white shadow-sm border-start border-primary border-5">
-        <h6 class="text-primary mb-3"><i class="bi bi-cpu me-2"></i> Posicion # ${record["Loc"]} ${subLocText}<span class="ms-2 badge bg-success bg-text-white rounded-pill text-uppercase">${record["Category"]}</span></h6>
+        <h6 class="text-primary mb-3">
+          <i class="bi bi-cpu me-2"></i>
+          Posicion # ${record["Loc"]} ${subLocText}
+          <span class="ms-2 badge bg-success bg-text-white rounded-pill text-uppercase">
+            ${record["Category"]}
+          </span>
+        </h6>
         <div class="row" id="formFields_${index}"></div>
       </div>
     `);
 
-      const $fieldsContainer = $formBlock.find(`#formFields_${index}`);
+    const $fieldsContainer = $formBlock.find(`#formFields_${index}`);
 
-      fields.forEach((key) => {
-        const originalValue = record[key] ?? "";
-        // crear id "seguro" (sin espacios ni caracteres inválidos)
-        const safeKey = key.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
-        const inputId = `${safeKey}_${index}`;
+    fields.forEach(key => {
+      const originalValue = record[key] ?? "";
+      const safeKey = key.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
+      const inputId = `${safeKey}_${index}`;
+      const isEmpty = originalValue === null || originalValue === "";
 
-        const isEmpty = originalValue === null || originalValue === "";
-
-        // elemento de input; guardamos data-field (clave real), data-index, data-original
-        const $field = $(`
+      const $field = $(`
         <div class="col-md-4">
           <div class="form-floating mb-3">
             <input
@@ -530,88 +527,52 @@ $(document).ready(function () {
         </div>
       `);
 
-        // adjuntar evento live validation
-        // $field.find("input").on("input blur change", function () {
-        //   validateSingleInput($(this));
-        // });
-
-        // Cuando se abre el offcanvas, enfocar el primer input editable
-        $(document).on("shown.bs.offcanvas", "#scanForm", function () {
-          const $firstEditable = $(this).find("input:not([readonly])").first();
-          if ($firstEditable.length) {
-            $firstEditable.focus().select();
-            console.log(
-              "🟢 Enfocado el primer input editable:",
-              $firstEditable.attr("id")
-            );
-          } else {
-            console.log("⚠️ No hay campos editables para enfocar.");
-          }
-        });
-
-        $field.find("input").on("input blur change", function () {
-          clearTimeout($(this).data("scanTimeout"));
-          const $inp = $(this);
-          const timeout = setTimeout(() => {
-            validateSingleInput($inp, false); // ← IMPORTANTE: sin alert
-          }, 150);
-          $inp.data("scanTimeout", timeout);
-        });
-
-        $fieldsContainer.append($field);
-      });
-
-      $scanDataFormRow.append($formBlock);
+      $fieldsContainer.append($field);
     });
 
-    // botón de envío (uno solo, al final)
-    $scanDataFormRow.append(`
-    <div class="col-12 text-end mt-3">
-      <button type="submit" class="btn btn-success">
-        <i class="bi bi-check-circle me-2"></i>Enviar
-      </button>
-    </div>
-  `);
+    $scanDataFormRow.append($formBlock);
+  });
 
-    // submit: validar todos los inputs editables contra el original
-    $("#scanDataForm")
-      .off("submit")
-      .on("submit", function (e) {
-        e.preventDefault();
+  // ------------------ Foco automático al abrir offcanvas ------------------
+  $(document).on("shown.bs.offcanvas", "#scanForm", function () {
+    const $firstEditable = $(this).find("input:visible:not([readonly])").first();
+    if ($firstEditable.length) {
+      $firstEditable.focus().select();
+      console.log("🟢 Primer input editable enfocado:", $firstEditable.attr("id"));
+    }
+  });
 
-        const mismatches = [];
+  // ------------------ Saltar al siguiente input editable ------------------
+  // Saltar al siguiente input editable y validar en tiempo real
+$("#scanDataForm").on("input", "input", function () {
+  const $this = $(this);
+  clearTimeout($this.data("scan-timeout"));
 
-        $(".component-input").each(function () {
-          const $input = $(this);
-          const isValid = validateSingleInput($input, true); // ← aquí sí queremos alertar
-          if (!isValid) {
-            mismatches.push({
-              index: $input.closest(".card").index(),
-              field: $input.data("field"),
-              expected: $input.data("original"),
-              got: $input.val(),
-            });
-          }
-        });
+  const timeout = setTimeout(() => {
+    // 1️⃣ Validar este input en tiempo real (sin alert)
+    validateSingleInput($this, false);
 
-        if (mismatches.length > 0) {
-          let mensaje = "❌ Hay diferencias con los datos originales:\n\n";
-          mismatches.forEach((m) => {
-            mensaje += `Componente ${m.index + 1} - ${m.field}\nEsperado: "${
-              m.expected
-            }"\nIngresado: "${m.got}"\n\n`;
-          });
-          alert(mensaje);
-        }
-        //  else {
-        //   alert("✅ Todos los componentes coinciden correctamente.");
-        // }
-      });
+    // 2️⃣ Avanzar al siguiente input editable si no es readonly
+    const val = $this.val().trim();
+    if (val === "" || $this.prop("readonly")) return;
 
-    console.log(
-      `✅ Renderizados ${data.length} bloque(s) con ${fields.length} campos cada uno.`
-    );
-  }
+    const $editableInputs = $("#scanDataForm input:visible:not([readonly])");
+    const currentIndex = $editableInputs.index($this);
+    if (currentIndex === -1) return;
+
+    const nextIndex = currentIndex + 1;
+    if (nextIndex < $editableInputs.length) {
+      $editableInputs.eq(nextIndex).focus().select();
+    }
+  }, 150);
+
+  $this.data("scan-timeout", timeout);
+});
+
+
+  console.log(`✅ Renderizados ${data.length} bloques con ${fields.length} campos cada uno.`);
+}
+
 
   // Detecta cuando un input recibe texto (escaneo)
   $("#scanDataForm").on("input", "input", function () {
