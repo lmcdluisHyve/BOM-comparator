@@ -421,79 +421,124 @@ $(document).ready(function () {
     renderScanForm();
   });
 
-  function renderScanForm() {
-  console.log("🟢 Generando formularios dinámicos...");
+  /* ================= utilidades de normalización/comparación ================= */
+  function normalizeValue(val, fieldKey) {
+    if (val === null || val === undefined) return "";
+    let s = String(val).trim();
 
-  const $scanDataFormRow = $("#scanDataFormRow");
-  $scanDataFormRow.empty();
+    // Detectar MAC por la clave (MAC, mac, MAC0, etc.)
+    if (/mac/i.test(fieldKey)) {
+      // eliminar todo lo que no sea hex y devolver en minúsculas
+      return s.replace(/[^a-fA-F0-9]/g, "").toLowerCase();
+    }
 
-  const stored = localStorage.getItem("dataWithCategory");
-  if (!stored) {
-    $scanDataFormRow.html(`
-      <div class="alert alert-warning text-center w-100">
-        <i class="bi bi-exclamation-triangle me-2"></i>
-        No se encontró información en localStorage.
-      </div>
-    `);
-    return;
+    // Normalizar acentos y convertir a minúsculas para comparaciones de texto
+    s = s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
+    return s.toLowerCase();
   }
 
-  const data = JSON.parse(stored);
-  if (!data.length) {
-    $scanDataFormRow.html(`
+  function valuesEqual(orig, current, key) {
+    const o = normalizeValue(orig, key);
+    const c = normalizeValue(current, key);
+
+    // Si ambos vacíos -> OK
+    if (o === "" && c === "") return true;
+
+    // Si ambos parecen numéricos -> comparar numéricamente
+    const numO = parseFloat(o);
+    const numC = parseFloat(c);
+    if (!isNaN(numO) && !isNaN(numC) && String(numO) === String(numC))
+      return true;
+
+    // Comparación estricta de strings ya normalizados
+    return o === c;
+  }
+
+  /* ========================= render + validación ============================ */
+  function renderScanForm() {
+    console.log("🟢 renderScanForm(): generando formularios...");
+
+    const $scanDataFormRow = $("#scanDataFormRow");
+    $scanDataFormRow.empty();
+
+    const stored = localStorage.getItem("dataWithCategory");
+    if (!stored) {
+      $scanDataFormRow.html(`
       <div class="alert alert-warning text-center w-100">
         <i class="bi bi-exclamation-triangle me-2"></i>
+        No se encontró información en localStorage (dataWithCategory).
+      </div>
+    `);
+      return;
+    }
+
+    const data = JSON.parse(stored);
+    if (!Array.isArray(data) || data.length === 0) {
+      $scanDataFormRow.html(`
+      <div class="alert alert-warning text-center w-100">
         No hay registros para renderizar.
       </div>
     `);
-    return;
-  }
+      return;
+    }
 
-  // 🔹 Campos a renderizar
-  const fields = ["Asset_Tag", "Comp S/N", "MAC0"];
+    // campos fijos (solo estos se mostrarán)
+    const fields = ["Asset_Tag", "Comp S/N", "MAC0"];
 
-  // 🔹 Recorremos cada objeto del array
-  data.forEach((record, index) => {
-    const $formBlock = $(`
-      <div class="border rounded p-3 mb-4 bg-white shadow-sm">
-        <h6 class="text-primary mb-3">
-          <i class="bi bi-cpu me-2"></i> Registro ${index + 1} - ${record["Category"]}
-        </h6>
+    data.forEach((record, index) => {
+      console.log(record)
+      // bloque por registro
+      const $formBlock = $(`
+      <div class="rounded p-3 mb-4 bg-white shadow-sm border-start border-primary border-5">
+        <h6 class="text-primary mb-3"><i class="bi bi-cpu me-2"></i> Posicion # ${record["Loc"]} - Sub Loc ${record["Sub Loc"]}<span class="ms-2 badge bg-success bg-text-white rounded-pill text-uppercase">${record["Category"]}</span></h6>
         <div class="row" id="formFields_${index}"></div>
       </div>
     `);
 
-    const $fieldsContainer = $formBlock.find(`#formFields_${index}`);
+      const $fieldsContainer = $formBlock.find(`#formFields_${index}`);
 
-    fields.forEach((key) => {
-      const value = record[key];
-      console.log(record)
-      const isEmpty = value === null || value === "";
+      fields.forEach((key) => {
+        const originalValue = record[key] ?? "";
+        // crear id "seguro" (sin espacios ni caracteres inválidos)
+        const safeKey = key.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
+        const inputId = `${safeKey}_${index}`;
 
-      const $input = $(`
+        const isEmpty = originalValue === null || originalValue === "";
+
+        // elemento de input; guardamos data-field (clave real), data-index, data-original
+        const $field = $(`
         <div class="col-md-4">
           <div class="form-floating mb-3">
             <input
               type="text"
               class="form-control ${isEmpty ? "bg-light text-muted" : ""}"
-              id="${key}_${index}"
-              name="${key}_${index}"
+              id="${inputId}"
+              name="${safeKey}_${index}"
               placeholder="${key}"
-              ${!isEmpty ? "autofocus" : ""}
-              ${isEmpty ? "readonly" : ""}>
-            <label for="${key}_${index}">${key}</label>
+              ${isEmpty ? "readonly" : ""}
+              data-field="${key}"
+              data-index="${index}"
+              data-original="${originalValue || ""}"
+            />
+            <label for="${inputId}">${key}</label>
+            <small class="invalid-feedback"></small>
           </div>
         </div>
       `);
 
-      $fieldsContainer.append($input);
+        // adjuntar evento live validation
+        $field.find("input").on("input blur change", function () {
+          validateSingleInput($(this));
+        });
+
+        $fieldsContainer.append($field);
+      });
+
+      $scanDataFormRow.append($formBlock);
     });
 
-    $scanDataFormRow.append($formBlock);
-  });
-
-  // 🔹 Botón de envío general
-  $scanDataFormRow.append(`
+    // botón de envío (uno solo, al final)
+    $scanDataFormRow.append(`
     <div class="col-12 text-end mt-3">
       <button type="submit" class="btn btn-success">
         <i class="bi bi-check-circle me-2"></i>Enviar
@@ -501,15 +546,224 @@ $(document).ready(function () {
     </div>
   `);
 
-  // 🔹 Evento de envío
-  $("#scanDataForm").off("submit").on("submit", function (e) {
+    // submit: validar todos los inputs editables contra el original
+    $("#scanDataForm")
+      .off("submit")
+      .on("submit", function (e) {
+        e.preventDefault();
+
+        const $editableInputs = $(this).find("input:not([readonly])");
+        const mismatches = [];
+
+        $editableInputs.each(function () {
+          const $inp = $(this);
+          const ok = validateSingleInput($inp);
+          if (!ok) {
+            mismatches.push({
+              index: $inp.data("index"),
+              field: $inp.data("field"),
+              expected: $inp.data("original"),
+              got: $inp.val(),
+            });
+          }
+        });
+
+        if (mismatches.length) {
+          // mostrar resumen y enfocar el primer error
+          let mensaje = "❌ Hay diferencias con los datos originales:\n\n";
+          mismatches.forEach((m) => {
+            mensaje += `Registro ${m.index + 1} - ${m.field}\n  Esperado: "${
+              m.expected
+            }"\n  Ingresado: "${m.got}"\n\n`;
+          });
+          alert(mensaje);
+          const $firstInvalid = $(this).find(".is-invalid").first();
+          if ($firstInvalid.length) $firstInvalid.focus();
+          return;
+        }
+
+        // si todo ok: serializar y hacer lo que necesites (ej: enviar, actualizar localStorage, etc.)
+        const formData = $(this).serializeArray();
+        console.log("✅ Envío OK. formData:", formData);
+        alert(
+          "✅ Todos los valores coinciden con la tabla original. Enviado correctamente."
+        );
+      });
+
+    console.log(
+      `✅ Renderizados ${data.length} bloque(s) con ${fields.length} campos cada uno.`
+    );
+  }
+
+  // Detecta cuando un input recibe texto (escaneo)
+$("#scanDataForm").on("input", "input", function() {
+  const $this = $(this);
+
+  // Espera un poco (el escáner escribe muy rápido)
+  clearTimeout($this.data("scan-timeout"));
+  const timeout = setTimeout(() => {
+    // Solo avanzar si el campo tiene algo y no es readonly
+    if ($this.val().trim() !== "" && !$this.prop("readonly")) {
+      const $inputs = $("#scanDataForm input:not([readonly])");
+      const currentIndex = $inputs.index($this);
+      const nextIndex = (currentIndex + 1) % $inputs.length;
+      $inputs.eq(nextIndex).focus().select();
+    }
+  }, 150); // 150ms es suficiente para la mayoría de los escáneres
+
+  $this.data("scan-timeout", timeout);
+});
+
+
+  // Detectar Tab en cualquier input dentro del formulario
+$("#scanDataForm").on("keydown", "input", function(e) {
+  if (e.key === "Tab") {
     e.preventDefault();
-    const formData = $(this).serializeArray();
-    console.log("📤 Datos enviados:", formData);
-    alert("✅ Formularios enviados correctamente.");
+
+    const $inputs = $("#scanDataForm input:not([readonly])");
+    const currentIndex = $inputs.index(this);
+    let nextIndex;
+
+    if (e.shiftKey) {
+      nextIndex = (currentIndex - 1 + $inputs.length) % $inputs.length;
+    } else {
+      nextIndex = (currentIndex + 1) % $inputs.length;
+    }
+
+    $inputs.eq(nextIndex).focus();
+  }
+});
+
+
+
+  /* ================= validación de un input ================= */
+  function validateSingleInput($input) {
+    const key = $input.data("field");
+    const original = $input.data("original") ?? "";
+    const current = $input.val() ?? "";
+
+    const ok = valuesEqual(original, current, key);
+
+    // Ajustar clases de Bootstrap
+    if (ok) {
+      $input.removeClass("is-invalid").addClass("is-valid");
+      $input.closest(".form-floating").find(".invalid-feedback").text("");
+    } else {
+      $input.removeClass("is-valid").addClass("is-invalid");
+      const expectedDisplay = original === "" ? "(vacío)" : String(original);
+      $input
+        .closest(".form-floating")
+        .find(".invalid-feedback")
+        .text(`Valor esperado: "${expectedDisplay}"`);
+    }
+
+    // ✅ actualizar conteos por bloque y globales
+    updateBlockCounters();
+    updateGlobalCounters();
+
+    return ok;
+  }
+
+  /* ================= actualizar contadores por bloque ================= */
+  function updateBlockCounters() {
+    $(".component-block").each(function () {
+      const $block = $(this);
+      const inputs = $block.find("input:not([readonly])");
+      const correct = inputs.filter(".is-valid").length;
+      const incorrect = inputs.filter(".is-invalid").length;
+      const pending = inputs.length - correct - incorrect;
+
+      $block.find(".block-correct").text(correct);
+      $block.find(".block-pending").text(incorrect + pending);
+    });
+  }
+
+  /* ================= actualizar contadores globales ================= */
+  function updateGlobalCounters() {
+    const totalInputs = $("#scanDataForm input:not([readonly])").length;
+    const totalCorrectos = $(
+      "#scanDataForm input.is-valid:not([readonly])"
+    ).length;
+    const totalErrores = $(
+      "#scanDataForm input.is-invalid:not([readonly])"
+    ).length;
+    const totalPendientes = totalInputs - totalCorrectos - totalErrores;
+
+    $("#totalComponentsScanned").text(totalCorrectos);
+    $("#pendingComponents").text(totalErrores + totalPendientes);
+  }
+
+  function renderFinalSummary() {
+  const $tbody = $("#validationSummary");
+  $tbody.empty();
+
+  let totalCorrect = 0;
+  let totalError = 0;
+
+  $(".component-block").each(function(i) {
+    const block = $(this);
+    const fields = {};
+    block.find("input").each(function() {
+      const key = $(this).data("field");
+      fields[key] = $(this).val();
+    });
+
+    const correct = block.find("input.is-invalid").length === 0;
+    const statusBadge = correct
+      ? `<span class="badge bg-success">OK</span>`
+      : `<span class="badge bg-danger">Error</span>`;
+
+    if (correct) totalCorrect++;
+    else totalError++;
+
+    $tbody.append(`
+      <tr>
+        <td>${i + 1}</td>
+        <td>${fields["Asset_Tag"] || "-"}</td>
+        <td>${fields["Comp S/N"] || "-"}</td>
+        <td>${fields["MAC0"] || "-"}</td>
+        <td>${statusBadge}</td>
+      </tr>
+    `);
   });
 
-  console.log("✅ Renderizados", data.length, "formularios con 3 campos cada uno.");
+  $("#totalComponentsScannedFinal").text(totalCorrect);
+  $("#pendingComponentsFinal").text(totalError);
 }
+
+// ================== Exportar XLSX ==================
+$("#exportSummaryBtn").off("click").on("click", function() {
+  const data = [];
+  $("#validationSummary tr").each(function() {
+    const row = [];
+    $(this).find("td").each(function() {
+      row.push($(this).text());
+    });
+    if(row.length) data.push(row);
+  });
+
+  if (!data.length) {
+    alert("No hay datos para exportar.");
+    return;
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet([["#", "Asset Tag", "Comp S/N", "MAC0", "Estado"], ...data]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Resumen");
+  XLSX.writeFile(wb, "ResumenComponentes.xlsx");
+});
+
+// ================== Botón volver a editar ==================
+$("#goBackToEdit").off("click").on("click", function() {
+  // ejemplo: retroceder al step 2 del wizard
+  $currentStep = 2;
+  showStep($currentStep);
+});
+
+// ================== Botón finalizar ==================
+$("#confirmFinish").off("click").on("click", function() {
+  alert("✅ Proceso finalizado correctamente.");
+  // Aquí podrías limpiar el wizard, guardar datos en DB, etc.
+});
 
 });

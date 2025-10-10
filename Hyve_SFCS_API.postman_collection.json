@@ -1,0 +1,32 @@
+{
+  "info": {
+    "name": "Hyve SFCS API",
+    "_postman_id": "a1f1a7d0-0001-4f7c-bc7e-hyve001",
+    "description": "Colección para consultar información de racks en Hyve SFCS API.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get Rack Info",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json", "type": "text" },
+          { "key": "token", "value": "{{SFCS_PROD_TOKEN}}", "type": "text" }
+        ],
+        "url": {
+          "raw": "{{SFCS_PROD_HOSTNAME}}/mfg-sfcs-api/api/rackInfo/sn/CNGB093025000017",
+          "host": ["{{SFCS_PROD_HOSTNAME}}"],
+          "path": [
+            "mfg-sfcs-api",
+            "api",
+            "rackInfo",
+            "sn",
+            "CNGB093025000017"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
