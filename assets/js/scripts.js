@@ -486,11 +486,15 @@ $(document).ready(function () {
     const fields = ["Asset_Tag", "Comp S/N", "MAC0"];
 
     data.forEach((record, index) => {
-      console.log(record)
+      console.log(record);
+      const subLocText =
+        record["Sub Loc"] && record["Sub Loc"] !== "0"
+          ? ` - Sub Loc ${record["Sub Loc"]}`
+          : "";
       // bloque por registro
       const $formBlock = $(`
       <div class="rounded p-3 mb-4 bg-white shadow-sm border-start border-primary border-5">
-        <h6 class="text-primary mb-3"><i class="bi bi-cpu me-2"></i> Posicion # ${record["Loc"]} - Sub Loc ${record["Sub Loc"]}<span class="ms-2 badge bg-success bg-text-white rounded-pill text-uppercase">${record["Category"]}</span></h6>
+        <h6 class="text-primary mb-3"><i class="bi bi-cpu me-2"></i> Posicion # ${record["Loc"]} ${subLocText}<span class="ms-2 badge bg-success bg-text-white rounded-pill text-uppercase">${record["Category"]}</span></h6>
         <div class="row" id="formFields_${index}"></div>
       </div>
     `);
@@ -527,8 +531,31 @@ $(document).ready(function () {
       `);
 
         // adjuntar evento live validation
+        // $field.find("input").on("input blur change", function () {
+        //   validateSingleInput($(this));
+        // });
+
+        // Cuando se abre el offcanvas, enfocar el primer input editable
+        $(document).on("shown.bs.offcanvas", "#scanForm", function () {
+          const $firstEditable = $(this).find("input:not([readonly])").first();
+          if ($firstEditable.length) {
+            $firstEditable.focus().select();
+            console.log(
+              "🟢 Enfocado el primer input editable:",
+              $firstEditable.attr("id")
+            );
+          } else {
+            console.log("⚠️ No hay campos editables para enfocar.");
+          }
+        });
+
         $field.find("input").on("input blur change", function () {
-          validateSingleInput($(this));
+          clearTimeout($(this).data("scanTimeout"));
+          const $inp = $(this);
+          const timeout = setTimeout(() => {
+            validateSingleInput($inp, false); // ← IMPORTANTE: sin alert
+          }, 150);
+          $inp.data("scanTimeout", timeout);
         });
 
         $fieldsContainer.append($field);
@@ -552,42 +579,33 @@ $(document).ready(function () {
       .on("submit", function (e) {
         e.preventDefault();
 
-        const $editableInputs = $(this).find("input:not([readonly])");
         const mismatches = [];
 
-        $editableInputs.each(function () {
-          const $inp = $(this);
-          const ok = validateSingleInput($inp);
-          if (!ok) {
+        $(".component-input").each(function () {
+          const $input = $(this);
+          const isValid = validateSingleInput($input, true); // ← aquí sí queremos alertar
+          if (!isValid) {
             mismatches.push({
-              index: $inp.data("index"),
-              field: $inp.data("field"),
-              expected: $inp.data("original"),
-              got: $inp.val(),
+              index: $input.closest(".card").index(),
+              field: $input.data("field"),
+              expected: $input.data("original"),
+              got: $input.val(),
             });
           }
         });
 
-        if (mismatches.length) {
-          // mostrar resumen y enfocar el primer error
+        if (mismatches.length > 0) {
           let mensaje = "❌ Hay diferencias con los datos originales:\n\n";
           mismatches.forEach((m) => {
-            mensaje += `Registro ${m.index + 1} - ${m.field}\n  Esperado: "${
+            mensaje += `Componente ${m.index + 1} - ${m.field}\nEsperado: "${
               m.expected
-            }"\n  Ingresado: "${m.got}"\n\n`;
+            }"\nIngresado: "${m.got}"\n\n`;
           });
           alert(mensaje);
-          const $firstInvalid = $(this).find(".is-invalid").first();
-          if ($firstInvalid.length) $firstInvalid.focus();
-          return;
         }
-
-        // si todo ok: serializar y hacer lo que necesites (ej: enviar, actualizar localStorage, etc.)
-        const formData = $(this).serializeArray();
-        console.log("✅ Envío OK. formData:", formData);
-        alert(
-          "✅ Todos los valores coinciden con la tabla original. Enviado correctamente."
-        );
+        //  else {
+        //   alert("✅ Todos los componentes coinciden correctamente.");
+        // }
       });
 
     console.log(
@@ -596,55 +614,60 @@ $(document).ready(function () {
   }
 
   // Detecta cuando un input recibe texto (escaneo)
-$("#scanDataForm").on("input", "input", function() {
-  const $this = $(this);
+  $("#scanDataForm").on("input", "input", function () {
+    const $this = $(this);
 
-  // Espera un poco (el escáner escribe muy rápido)
-  clearTimeout($this.data("scan-timeout"));
-  const timeout = setTimeout(() => {
-    // Solo avanzar si el campo tiene algo y no es readonly
-    if ($this.val().trim() !== "" && !$this.prop("readonly")) {
-      const $inputs = $("#scanDataForm input:not([readonly])");
-      const currentIndex = $inputs.index($this);
-      const nextIndex = (currentIndex + 1) % $inputs.length;
-      $inputs.eq(nextIndex).focus().select();
-    }
-  }, 150); // 150ms es suficiente para la mayoría de los escáneres
+    // Espera un poco (el escáner escribe muy rápido)
+    clearTimeout($this.data("scan-timeout"));
+    const timeout = setTimeout(() => {
+      // Solo avanzar si el campo tiene algo y no es readonly
+      if ($this.val().trim() !== "" && !$this.prop("readonly")) {
+        const $inputs = $("#scanDataForm input:not([readonly])");
+        const currentIndex = $inputs.index($this);
+        const nextIndex = (currentIndex + 1) % $inputs.length;
+        $inputs.eq(nextIndex).focus().select();
+      }
+    }, 150); // 150ms es suficiente para la mayoría de los escáneres
 
-  $this.data("scan-timeout", timeout);
-});
-
+    $this.data("scan-timeout", timeout);
+  });
 
   // Detectar Tab en cualquier input dentro del formulario
-$("#scanDataForm").on("keydown", "input", function(e) {
-  if (e.key === "Tab") {
-    e.preventDefault();
+  $("#scanDataForm").on("keydown", "input", function (e) {
+    if (e.key === "Tab") {
+      e.preventDefault();
 
-    const $inputs = $("#scanDataForm input:not([readonly])");
-    const currentIndex = $inputs.index(this);
-    let nextIndex;
+      const $inputs = $("#scanDataForm input:not([readonly])");
+      const currentIndex = $inputs.index(this);
+      let nextIndex;
 
-    if (e.shiftKey) {
-      nextIndex = (currentIndex - 1 + $inputs.length) % $inputs.length;
-    } else {
-      nextIndex = (currentIndex + 1) % $inputs.length;
+      if (e.shiftKey) {
+        nextIndex = (currentIndex - 1 + $inputs.length) % $inputs.length;
+      } else {
+        nextIndex = (currentIndex + 1) % $inputs.length;
+      }
+
+      $inputs.eq(nextIndex).focus();
     }
+  });
 
-    $inputs.eq(nextIndex).focus();
+  function cleanScanValue(value) {
+    return (value || "")
+      .toString()
+      .trim()
+      .replace(/[\r\n\t]+/g, "")
+      .replace(/\s{2,}/g, " ");
   }
-});
-
-
 
   /* ================= validación de un input ================= */
-  function validateSingleInput($input) {
+  function validateSingleInput($input, showAlert = false) {
     const key = $input.data("field");
     const original = $input.data("original") ?? "";
-    const current = $input.val() ?? "";
+    const current = cleanScanValue($input.val()) ?? "";
 
     const ok = valuesEqual(original, current, key);
 
-    // Ajustar clases de Bootstrap
+    // Ajustar clases visuales Bootstrap
     if (ok) {
       $input.removeClass("is-invalid").addClass("is-valid");
       $input.closest(".form-floating").find(".invalid-feedback").text("");
@@ -655,9 +678,15 @@ $("#scanDataForm").on("keydown", "input", function(e) {
         .closest(".form-floating")
         .find(".invalid-feedback")
         .text(`Valor esperado: "${expectedDisplay}"`);
+
+      // ❌ El alert solo se permite si se llama con showAlert = true
+      if (showAlert === true) {
+        console.warn(
+          `❌ Diferencia detectada en ${key}: esperado "${original}", recibido "${current}"`
+        );
+      }
     }
 
-    // ✅ actualizar conteos por bloque y globales
     updateBlockCounters();
     updateGlobalCounters();
 
@@ -694,29 +723,29 @@ $("#scanDataForm").on("keydown", "input", function(e) {
   }
 
   function renderFinalSummary() {
-  const $tbody = $("#validationSummary");
-  $tbody.empty();
+    const $tbody = $("#validationSummary");
+    $tbody.empty();
 
-  let totalCorrect = 0;
-  let totalError = 0;
+    let totalCorrect = 0;
+    let totalError = 0;
 
-  $(".component-block").each(function(i) {
-    const block = $(this);
-    const fields = {};
-    block.find("input").each(function() {
-      const key = $(this).data("field");
-      fields[key] = $(this).val();
-    });
+    $(".component-block").each(function (i) {
+      const block = $(this);
+      const fields = {};
+      block.find("input").each(function () {
+        const key = $(this).data("field");
+        fields[key] = $(this).val();
+      });
 
-    const correct = block.find("input.is-invalid").length === 0;
-    const statusBadge = correct
-      ? `<span class="badge bg-success">OK</span>`
-      : `<span class="badge bg-danger">Error</span>`;
+      const correct = block.find("input.is-invalid").length === 0;
+      const statusBadge = correct
+        ? `<span class="badge bg-success">OK</span>`
+        : `<span class="badge bg-danger">Error</span>`;
 
-    if (correct) totalCorrect++;
-    else totalError++;
+      if (correct) totalCorrect++;
+      else totalError++;
 
-    $tbody.append(`
+      $tbody.append(`
       <tr>
         <td>${i + 1}</td>
         <td>${fields["Asset_Tag"] || "-"}</td>
@@ -725,45 +754,55 @@ $("#scanDataForm").on("keydown", "input", function(e) {
         <td>${statusBadge}</td>
       </tr>
     `);
-  });
-
-  $("#totalComponentsScannedFinal").text(totalCorrect);
-  $("#pendingComponentsFinal").text(totalError);
-}
-
-// ================== Exportar XLSX ==================
-$("#exportSummaryBtn").off("click").on("click", function() {
-  const data = [];
-  $("#validationSummary tr").each(function() {
-    const row = [];
-    $(this).find("td").each(function() {
-      row.push($(this).text());
     });
-    if(row.length) data.push(row);
-  });
 
-  if (!data.length) {
-    alert("No hay datos para exportar.");
-    return;
+    $("#totalComponentsScannedFinal").text(totalCorrect);
+    $("#pendingComponentsFinal").text(totalError);
   }
 
-  const ws = XLSX.utils.aoa_to_sheet([["#", "Asset Tag", "Comp S/N", "MAC0", "Estado"], ...data]);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Resumen");
-  XLSX.writeFile(wb, "ResumenComponentes.xlsx");
-});
+  // ================== Exportar XLSX ==================
+  $("#exportSummaryBtn")
+    .off("click")
+    .on("click", function () {
+      const data = [];
+      $("#validationSummary tr").each(function () {
+        const row = [];
+        $(this)
+          .find("td")
+          .each(function () {
+            row.push($(this).text());
+          });
+        if (row.length) data.push(row);
+      });
 
-// ================== Botón volver a editar ==================
-$("#goBackToEdit").off("click").on("click", function() {
-  // ejemplo: retroceder al step 2 del wizard
-  $currentStep = 2;
-  showStep($currentStep);
-});
+      if (!data.length) {
+        alert("No hay datos para exportar.");
+        return;
+      }
 
-// ================== Botón finalizar ==================
-$("#confirmFinish").off("click").on("click", function() {
-  alert("✅ Proceso finalizado correctamente.");
-  // Aquí podrías limpiar el wizard, guardar datos en DB, etc.
-});
+      const ws = XLSX.utils.aoa_to_sheet([
+        ["#", "Asset Tag", "Comp S/N", "MAC0", "Estado"],
+        ...data,
+      ]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Resumen");
+      XLSX.writeFile(wb, "ResumenComponentes.xlsx");
+    });
 
+  // ================== Botón volver a editar ==================
+  $("#goBackToEdit")
+    .off("click")
+    .on("click", function () {
+      // ejemplo: retroceder al step 2 del wizard
+      $currentStep = 2;
+      showStep($currentStep);
+    });
+
+  // ================== Botón finalizar ==================
+  $("#confirmFinish")
+    .off("click")
+    .on("click", function () {
+      alert("✅ Proceso finalizado correctamente.");
+      // Aquí podrías limpiar el wizard, guardar datos en DB, etc.
+    });
 });
