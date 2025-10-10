@@ -1,43 +1,250 @@
 [
   {
     "PN Tag": "WTP-B3-A08AR11000001",
-    "Category ": "Rackframe "
+    "Category": "Rackframe "
   },
   {
     "PN Tag": "CLS-CS826032XDC11R02",
-    "Category ": "Switch "
+    "Category": "Switch "
   },
   {
     "PN Tag": "DNW-DMC-12-48R-DN0",
-    "Category ": "Switch-DMC-12 "
+    "Category": "Switch-DMC-12 "
   },
   {
     "PN Tag": "DAA-AC-153 B_01F",
-    "Category ": "Power shelf "
+    "Category": "Power shelf "
   },
   {
     "PN Tag": "DAA-DPS-3000AB-A03FC",
-    "Category ": "PSU "
+    "Category": "PSU "
   },
   {
     "PN Tag": "SMC-AZ4444-52X-DC-10-R02",
-    "Category ": "Switch "
+    "Category": "Switch "
   },
   {
     "PN Tag": "FOX-1A62LS800-600-G",
-    "Category ": "Rackframe "
+    "Category": "Rackframe "
   },
   {
     "PN Tag": "SMC-AS8060-32X-DC-03",
-    "Category ": "Switch "
+    "Category": "Switch "
   },
   {
     "PN Tag": "KAZ-AZ4444-52X-DC-10-R02",
-    "Category ": "Switch "
+    "Category": "Switch "
+  },
+  {
+    "PN Tag": "SVT-CB-26V2CE01F6/AM",
+    "Category": "PDU "
+  },
+  {
+    "PN Tag": "DAA-RA-200M E-S",
+    "Category": "Rackframe "
+  },
+  {
+    "PN Tag": "JPR-EX4400-48P",
+    "Category": "Switch "
+  },
+  {
+    "PN Tag": "FUSA-C9800-40-K9",
+    "Category": "Switch "
+  },
+  {
+    "PN Tag": "CLS-CS826032XDC11R02",
+    "Category": "Switch "
+  },
+  {
+    "PN Tag": "SMC-DMC1248RAS0",
+    "Category": "Switch "
+  },
+  {
+    "PN Tag": "JPR-SRX1500-AC",
+    "Category": "Switch "
+  },
+  {
+    "PN Tag": "JPR-QFX5120-48Y-AFO2",
+    "Category": "Switch "
+  },
+  {
+    "PN Tag": "JPR-QFX5120-32C-AFO",
+    "Category": "Switch "
   },
   {
     "PN Tag": "DAA-ESI-240A252AFAM4",
-    "Category ": "Inverter "
+    "Category": "Inverter "
+  },
+  {
+    "PN Tag": "DAA-SA-09T/FH B-S4",
+    "Category": "Power shelf "
+  },
+  {
+    "PN Tag": "LON-PS-2322-HADU-LFB",
+    "Category": "PSU "
+  },
+  {
+    "PN Tag": "LON-PF-2153-HANN-LF",
+    "Category": "Power shelf "
+  },
+  {
+    "PN Tag": "SMC-AS3510-48THVDC",
+    "Category": "Switch "
+  },
+  {
+    "PN Tag": "JPR-QFX5100-96S-AFO",
+    "Category": "Switch "
+  },
+  {
+    "PN Tag": "APC-KVM0108A",
+    "Category": "KVM "
+  },
+  {
+    "PN Tag": "CDW- AP5717",
+    "Category": "LCD-Console "
+  },
+  {
+    "PN Tag": "HPE-P14279-B21",
+    "Category": "ProLiant-HPE "
+  },
+  {
+    "PN Tag": "HPE-DL380G11",
+    "Category": "ProLiant-HPE "
+  },
+  {
+    "PN Tag": "FOX-1A627A300-600-GC",
+    "Category": "Rackframe "
+  },
+  {
+    "PN Tag": "KAZ-DMC-12-48R-DN0",
+    "Category": "Switch-DMC-12 "
+  },
+  {
+    "PN Tag": "CLS-CS821032XDC11R03",
+    "Category": "Switch "
+  },
+  {
+    "PN Tag": "WWT-STS12002SR000A4",
+    "Category": "PDU "
+  },
+  {
+    "PN Tag": "SVT-CB-26VEKE01F6/AM",
+    "Category": "PDU "
+  },
+  {
+    "PN Tag": "WWT-ISR4331/K9",
+    "Category": "Switch-CYSCO "
+  },
+  {
+    "PN Tag": "HPE-867958-B21",
+    "Category": "ProLiant-HPE "
+  },
+  {
+    "PN Tag": "DAA-RB-200S/LGAB-SS0",
+    "Category": "Rackframe "
+  },
+  {
+    "PN Tag": "CLS-AZ3324-00X-DC-11(R01)",
+    "Category": "KVM "
+  },
+  {
+    "PN Tag": "NIG-DM1045469",
+    "Category": "Rackframe "
+  },
+  {
+    "PN Tag": "CIN-K86-C049-901",
+    "Category": "Optic Module "
+  },
+  {
+    "PN Tag": "LON-PS-2322-1ADU-LF7",
+    "Category": "PSU "
+  },
+  {
+    "PN Tag": "LON-PF-1153-1ADN-LF7",
+    "Category": "Power shelf "
+  },
+  {
+    "PN Tag": "SMC-AZ338052XDC11R01",
+    "Category": "Switch "
+  },
+  {
+    "PN Tag": "CIN-NTT862JB",
+    "Category": "Optic Module "
+  },
+  {
+    "PN Tag": "ZTI-CS826032XDC11R02",
+    "Category": "Switch "
+  },
+  {
+    "PN Tag": "KAZ-CS821032XDC11R03",
+    "Category": "Switch "
+  },
+  {
+    "PN Tag": "SMC-AZ4444-52X-AC",
+    "Category": "Switch "
+  },
+  {
+    "PN Tag": "DEI-SA-09T/FHB-SR.S4",
+    "Category": "Power shelf "
+  },
+  {
+    "PN Tag": "WTP-B3-A08AR10000017-A6",
+    "Category": "Rackframe "
+  },
+  {
+    "PN Tag": "FOX-1A5296600-000-GE",
+    "Category": "Rackframe "
+  },
+  {
+    "PN Tag": "CIN-NTK834AE",
+    "Category": "Ciena Band Module "
+  },
+  {
+    "PN Tag": "CIN-NTK834AA",
+    "Category": "Ciena Band Module "
+  },
+  {
+    "PN Tag": "CIN-NTK810FB",
+    "Category": "CTM (Control and Timing Module) "
+  },
+  {
+    "PN Tag": "CIN-NTK803FA",
+    "Category": "CIENA 6500 R Slot Chassis "
+  },
+  {
+    "PN Tag": "CIN-NTK504NA",
+    "Category": "Ciena Optical Module "
+  },
+  {
+    "PN Tag": "CIN-NTK852MA",
+    "Category": "Ciena Optical Module "
+  },
+  {
+    "PN Tag": "CIN-NTK852AC",
+    "Category": "Ciena Optical Module "
+  },
+  {
+    "PN Tag": "CIN-NTK830AC",
+    "Category": "Ciena Optical Module "
+  },
+  {
+    "PN Tag": "CRI-G40-MA+",
+    "Category": "G42 CHASSIS KIT "
+  },
+  {
+    "PN Tag": "DAA-ESI-240A252AFA-M",
+    "Category": "Inverter "
+  },
+  {
+    "PN Tag": "ACB-OTD026-00BG01",
+    "Category": "PDU "
+  },
+  {
+    "PN Tag": "JPR-EX4300-48P",
+    "Category": "Switch "
+  },
+  {
+    "PN Tag": "HPE-DL360G10PS-US-002",
+    "Category": "ProLiant-HPE "
   }
-
 ]
