@@ -292,21 +292,49 @@ $(document).ready(function () {
     // -------------------------
     // STEP 2: RENDERIZAR TABLA CON CATEGORY
     // -------------------------
-    let dataCombined = [];
+    // ================== STEP 2 COMPLETO ==================
+    let dataCombined = []; // Datos combinados con categorías
 
+    // ================== Utilidades ==================
+    function escapeTemplateString(str) {
+      if (!str) return "";
+      return String(str).replace(/`/g, "\\`").replace(/\$/g, "\\$");
+    }
+
+    function normalizeValue(val, fieldKey) {
+      if (val === null || val === undefined) return "";
+      let s = String(val).trim();
+      if (/mac/i.test(fieldKey))
+        return s.replace(/[^a-fA-F0-9]/g, "").toLowerCase();
+      return s
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+    }
+
+    function valuesEqual(orig, current, key) {
+      const o = normalizeValue(orig, key);
+      const c = normalizeValue(current, key);
+      if (o === "" && c === "") return true;
+      const numO = parseFloat(o),
+        numC = parseFloat(c);
+      if (!isNaN(numO) && !isNaN(numC) && String(numO) === String(numC))
+        return true;
+      return o === c;
+    }
+
+    // ================== Inicializar Step 2 ==================
     function initStep2() {
       const $table = $("#mappedTable");
       const storedData = JSON.parse(localStorage.getItem("excelData")) || [];
 
-      if (storedData.length === 0) {
-        console.log("data en memoria", storedData);
-        $table.html(
-          `<tr><td><div class="empty text-center my-5">
+      if (!storedData.length) {
+        $table.html(`
+      <tr><td><div class="empty text-center my-5">
         <div class="empty-icon"><i class="bi bi-emoji-frown fs-4"></i></div>
         <h4>No se encontró ningún dato asociado</h4>
         <p class="empty-subtitle text-secondary">Intenta cargar un archivo Excel en el paso anterior.</p>
-      </div></td></tr>`
-        );
+      </div></td></tr>`);
         return;
       }
 
@@ -321,10 +349,9 @@ $(document).ready(function () {
         "Category",
       ];
 
-      // Ordenar datos
-      const orderFirst = { columna: "Loc", descenting: true };
-      const orderSecond = { columna: "Sub Loc", descenting: true };
       function orderByFields(a, b) {
+        const orderFirst = { columna: "Loc", descenting: true };
+        const orderSecond = { columna: "Sub Loc", descenting: true };
         const valA1 = a[orderFirst.columna] ?? "";
         const valB1 = b[orderFirst.columna] ?? "";
         const numA1 = parseFloat(valA1),
@@ -355,438 +382,286 @@ $(document).ready(function () {
 
       const dataOrdered = [...storedData].sort(orderByFields);
 
-      // Cargar JSON con categorías
+      // Cargar JSON de categorías
       $.getJSON("/data/partNumbers.json")
         .done(function (arrayToFind) {
           function cleanString(str) {
-            return (str || "")
-              .trim()
-              .toLowerCase();
+            return (str || "").trim().toLowerCase();
           }
-
-          // Combinar datos con categoría
-          dataCombined = dataOrdered.map((itemOrigin) => {
-            const valueToFind = cleanString(itemOrigin["Component PN"]);
-
-            const foundValue = arrayToFind.find((itemToFind) => {
-              const pnTag = cleanString(itemToFind["PN Tag"]);
-              return pnTag === valueToFind;
-            });
+          dataCombined = dataOrdered.map((item) => {
+            const valueToFind = cleanString(item["Component PN"]);
+            const foundValue = arrayToFind.find(
+              (x) => cleanString(x["PN Tag"]) === valueToFind
+            );
             return {
-              ...itemOrigin,
+              ...item,
               Category: foundValue ? foundValue["Category"] : "Not found",
-              MAC1: itemOrigin["MAC1"] ?? "",
+              MAC1: item["MAC1"] ?? "",
             };
           });
-          console.log("data combined", dataCombined)
-
-          // Renderizar tabla
-          let html = "<thead><tr>";
-          columnasDeseadas.forEach((col) => (html += `<th>${col}</th>`));
-          html += "</tr></thead><tbody>";
-
-          dataCombined.forEach((row) => {
-          html += "<tr>";
-          columnasDeseadas.forEach((col) => {
-            let value = row[col] ?? "";
-
-            // 🔹 Si la categoría es "Power Shelf" y la columna es MAC0 → usamos MAC1
-            if (col === "MAC0" && row["Category"] === "Power Shelf") {
-              value = row["MAC1"] ?? "";
-            }
-
-            // 🔹 No mostrar PSC si está vacío
-            if (col === "PSC" && (value === null || value === "")) value = "";
-
-            html += `<td>${escapeTemplateString(value)}</td>`;
-          });
-          html += "</tr>";
-        });
-
-          html += "</tbody>";
-
-          $table.html(html);
-
-          insertDataHeader(dataCombined);
+          renderStep2Table(dataCombined);
+          renderScanForm(dataCombined);
           localStorage.setItem(
             "dataWithCategory",
             JSON.stringify(dataCombined)
           );
-
-          function insertDataHeader(data) {
-            const lastItem = data.length - 1;
-            $("#atRackLabel, #atRackLabelInternal").html(
-              `<i class="bi bi-tag me-2"></i> ${data[0]["Sys AT"] ?? ""}`
-            );
-            $("#totalComponents, #totalComponentsLabel").text(data.length);
-            $("#projectName").text(data[0]["Project"]);
-            $("#snLabel").html(
-              `<i class="bi bi-tag me-2"></i> ${data[0]["Ser No"] ?? ""}`
-            );
-            $("#skuLabel").html(
-              `<i class="bi bi-tag me-2"></i> ${data[0]["Part#"] ?? ""}`
-            );
-            $("#woLabel").html(
-              `<i class="bi bi-tag me-2"></i> ${data[0]["WO#"] ?? ""}`
-            );
-            $("#scanByLabel").html(
-              `<i class="bi bi-person-bounding-box me-2"></i> ${
-                data[lastItem]["Worker Name"] ?? ""
-              }`
-            );
-          }
         })
         .fail(function (jqxhr, textStatus, error) {
           console.error("❌ Error cargando JSON:", textStatus, error);
         });
     }
 
-    $("#nextBtn").on("click", function () {
-      initStep2();
-    });
-  });
-
-  $(document).on("click", "#actionToScanBtn", function () {
-    renderScanForm(dataCombined);
-  });
-
-  /* ================= utilidades de normalización/comparación ================= */
-  function normalizeValue(val, fieldKey) {
-    if (val === null || val === undefined) return "";
-    let s = String(val).trim();
-
-    // Detectar MAC por la clave (MAC, mac, MAC0, etc.)
-    if (/mac/i.test(fieldKey)) {
-      // eliminar todo lo que no sea hex y devolver en minúsculas
-      return s.replace(/[^a-fA-F0-9]/g, "").toLowerCase();
+    // ================== Renderizar tabla ==================
+    function renderStep2Table(data) {
+      const $table = $("#mappedTable");
+      const columnasDeseadas = [
+        "Loc",
+        "Sub Loc",
+        "Comp S/N",
+        "Asset_Tag",
+        "MAC0",
+        "PSC",
+        "Component PN",
+        "Category",
+      ];
+      let html = "<thead><tr>";
+      columnasDeseadas.forEach((col) => (html += `<th>${col}</th>`));
+      html += "</tr></thead><tbody>";
+      data.forEach((row) => {
+        html += "<tr>";
+        columnasDeseadas.forEach((col) => {
+          let value = row[col] ?? "";
+          if (col === "MAC0" && row["Category"] === "Power shelf")
+            value = row["MAC1"] ?? "";
+          html += `<td>${escapeTemplateString(value)}</td>`;
+        });
+        html += "</tr>";
+      });
+      html += "</tbody>";
+      $table.html(html);
+      insertDataHeader(data);
     }
 
-    // Normalizar acentos y convertir a minúsculas para comparaciones de texto
-    s = s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
-    return s.toLowerCase();
-  }
+    // ================== Insertar encabezado ==================
+    function insertDataHeader(data) {
+      const lastItem = data.length - 1;
+      $("#atRackLabel, #atRackLabelInternal").html(
+        `<i class="bi bi-tag me-2"></i> ${data[0]["Sys AT"] ?? ""}`
+      );
+      $("#totalComponents, #totalComponentsLabel").text(data.length);
+      $("#projectName").text(data[0]["Project"] ?? "");
+      $("#snLabel").html(
+        `<i class="bi bi-tag me-2"></i> ${data[0]["Ser No"] ?? ""}`
+      );
+      $("#skuLabel").html(
+        `<i class="bi bi-tag me-2"></i> ${data[0]["Part#"] ?? ""}`
+      );
+      $("#woLabel").html(
+        `<i class="bi bi-tag me-2"></i> ${data[0]["WO#"] ?? ""}`
+      );
+      $("#scanByLabel").html(
+        `<i class="bi bi-person-bounding-box me-2"></i> ${
+          data[lastItem]["Worker Name"] ?? ""
+        }`
+      );
+    }
 
-  function valuesEqual(orig, current, key) {
-    const o = normalizeValue(orig, key);
-    const c = normalizeValue(current, key);
+    // ================== Renderizar formulario ==================
+    function renderScanForm(data) {
+      const fields = ["Asset_Tag", "Comp S/N", "MAC0", "PSC"];
+      const $scanDataFormRow = $("#scanDataFormRow");
+      $scanDataFormRow.empty();
 
-    // Si ambos vacíos -> OK
-    if (o === "" && c === "") return true;
-
-    // Si ambos parecen numéricos -> comparar numéricamente
-    const numO = parseFloat(o);
-    const numC = parseFloat(c);
-    if (!isNaN(numO) && !isNaN(numC) && String(numO) === String(numC))
-      return true;
-
-    // Comparación estricta de strings ya normalizados
-    return o === c;
-  }
-
-  function escapeTemplateString(str) {
-  if (!str) return "";
-  return String(str)
-    .replace(/`/g, "\\`")   // Escapa backticks
-    .replace(/\$/g, "\\$"); // Escapa signos $
-}
-
-  /* ========================= render + validación ============================ */
-   function renderScanForm(data) {
-  const fields = ["Asset_Tag", "Comp S/N", "MAC0", "PSC"];
-  const $scanDataFormRow = $("#scanDataFormRow");
-  $scanDataFormRow.empty();
-
-  data.forEach((record, index) => {
-    const subLocText =
-      record["Sub Loc"] && record["Sub Loc"] !== "0"
-        ? ` - Sub Loc ${escapeTemplateString(record["Sub Loc"])}`
-        : "";
-
-    const safeCategory = escapeTemplateString(record["Category"]);
-    const loc = escapeTemplateString(record["Loc"]);
-
-    const $formBlock = $(`
+      data.forEach((record, index) => {
+        const subLocText =
+          record["Sub Loc"] && record["Sub Loc"] !== "0"
+            ? ` - Sub Loc ${escapeTemplateString(record["Sub Loc"])}`
+            : "";
+        const safeCategory = escapeTemplateString(record["Category"]);
+        const loc = escapeTemplateString(record["Loc"]);
+        const $formBlock = $(`
       <div class="rounded p-3 mb-4 bg-white shadow-sm border-start border-primary border-5 component-block">
         <h6 class="text-primary mb-3">
           <i class="bi bi-cpu me-2"></i>
           Posición # ${loc}${subLocText}
-          <span class="ms-2 badge bg-success text-white rounded-pill text-uppercase">
-            ${safeCategory}
-          </span>
+          <span class="ms-2 badge bg-success text-white rounded-pill text-uppercase">${safeCategory}</span>
         </h6>
         <div class="row" id="formFields_${index}"></div>
-      </div>
-    `);
+      </div>`);
+        const $fieldsContainer = $formBlock.find(`#formFields_${index}`);
 
-    const $fieldsContainer = $formBlock.find(`#formFields_${index}`);
+        fields.forEach((key) => {
+          let value =
+            key === "MAC0" && record["Category"] === "Power shelf"
+              ? record["MAC1"] ?? ""
+              : record[key] ?? "";
+          const isEmpty = !value;
 
-    fields.forEach((key) => {
-      let value =
-        key === "MAC0" && record["Category"] === "Power Shelf"
-          ? record["MAC1"] ?? ""
-          : record[key] ?? "";
-
-      if (!value) return;
-
-      const isEmpty = !value;
-      const safeKey = key.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
-      const inputId = `${safeKey}_${index}`;
-      const labelEmpty = `${key} - N/A`;
-
-      value = escapeTemplateString(value);
-
-      const $field = $(`
+          if (key === "PSC" && isEmpty || key !== "PSC" && isEmpty) return;
+          const safeKey = key
+            .replace(/\s+/g, "_")
+            .replace(/[^a-zA-Z0-9_]/g, "");
+          const inputId = `${safeKey}_${index}`;
+          const labelEmpty = `${key} - N/A`;
+          value = escapeTemplateString(value);
+          const $field = $(`
         <div class="col-md-4">
           <div class="form-floating mb-3">
-            <input
-              type="text"
-              class="form-control ${isEmpty ? "bg-light text-muted" : ""}"
-              id="${inputId}"
-              name="${safeKey}_${index}"
-              placeholder="${key}"
-              ${isEmpty ? "readonly" : ""}
-              data-field="${key}"
-              data-index="${index}"
-              data-original="${value}"
-            />
+            <input type="text" class="form-control ${
+              isEmpty ? "bg-light text-muted" : ""
+            }" id="${inputId}" name="${safeKey}_${index}" placeholder="${key}" ${
+            isEmpty ? "readonly" : ""
+          } data-field="${key}" data-index="${index}" data-original="${value}" />
             <label for="${inputId}">${isEmpty ? labelEmpty : key}</label>
             <small class="invalid-feedback"></small>
           </div>
-        </div>
-      `);
+        </div>`);
+          $fieldsContainer.append($field);
+        });
 
-      $fieldsContainer.append($field);
-    });
+        $scanDataFormRow.append($formBlock);
+      });
 
-    $scanDataFormRow.append($formBlock);
-  });
+      $("#scanDataForm input").on("input", function () {
+        validateSingleInput($(this));
+        updateNextBtnState();
+        updateBlockCounters();
+        updateGlobalCounters();
+      });
 
-  console.log(
-    `✅ Renderizados ${data.length} bloques con ${fields.length} campos cada uno.`
-  );
-}
-
-    // ------------------ Foco automático al abrir offcanvas ------------------
-    $(document).on("shown.bs.offcanvas", "#scanForm", function () {
-      const $firstEditable = $(this)
-        .find("input:visible:not([readonly])")
-        .first();
-      if ($firstEditable.length) {
-        $firstEditable.focus().select();
-        console.log(
-          "🟢 Primer input editable enfocado:",
-          $firstEditable.attr("id")
-        );
-      }
-    });
-
-    // ------------------ Saltar al siguiente input editable ------------------
-    // Saltar al siguiente input editable y validar en tiempo real
-     $("#scanDataForm input").on("input", function () {
-    const $this = $(this);
-    validateSingleInput($this);
-    updateNextBtnState();
-  });
-
-  function validateSingleInput($input) {
-    const key = $input.data("field");
-    const original = $input.data("original") ?? "";
-    const current = $input.val().trim();
-
-    // 🔹 Validación simple: igual al valor original
-    const ok =
-      (original === "" && current === "") || original.toLowerCase() === current.toLowerCase();
-
-    if (ok) {
-      $input.removeClass("is-invalid").addClass("is-valid");
-      $input.closest(".form-floating").find(".invalid-feedback").text("");
-    } else {
-      $input.removeClass("is-valid").addClass("is-invalid");
-      $input
-        .closest(".form-floating")
-        .find(".invalid-feedback")
-        .text(`Valor esperado: "${original}"`);
+      updateNextBtnState();
+      updateBlockCounters();
+      updateGlobalCounters();
+      renderFinalSummary();
     }
-    return ok;
-  }
 
-    console.log(
-      `✅ Renderizados ${data.length} bloques con ${fields.length} campos cada uno.`
-    );
-  // }
-
-  function updateNextBtnState() {
-    const allValid = $("#scanDataForm input:not([readonly])").length ===
-      $("#scanDataForm input.is-valid:not([readonly])").length;
-
-    $("#nextBtn").prop("disabled", !allValid);
-  }
-
-  // Inicializamos estado del botón
-  updateNextBtnState();
-  
-// }
-
-  // Detecta cuando un input recibe texto (escaneo)
-  $("#scanDataForm").on("input", "input", function () {
-    const $this = $(this);
-
-    // Espera un poco (el escáner escribe muy rápido)
-    clearTimeout($this.data("scan-timeout"));
-    const timeout = setTimeout(() => {
-      // Solo avanzar si el campo tiene algo y no es readonly
-      if ($this.val().trim() !== "" && !$this.prop("readonly")) {
-        const $inputs = $("#scanDataForm input:not([readonly])");
-        const currentIndex = $inputs.index($this);
-        const nextIndex = (currentIndex + 1) % $inputs.length;
-        $inputs.eq(nextIndex).focus().select();
-      }
-    }, 150); // 150ms es suficiente para la mayoría de los escáneres
-
-    $this.data("scan-timeout", timeout);
-  });
-
-  // Detectar Tab en cualquier input dentro del formulario
-  $("#scanDataForm").on("keydown", "input", function (e) {
-    if (e.key === "Tab") {
-      e.preventDefault();
-
-      const $inputs = $("#scanDataForm input:not([readonly])");
-      const currentIndex = $inputs.index(this);
-      let nextIndex;
-
-      if (e.shiftKey) {
-        nextIndex = (currentIndex - 1 + $inputs.length) % $inputs.length;
+    // ================== Validaciones ==================
+    function validateSingleInput($input) {
+      const original = $input.data("original") ?? "";
+      const current = $input.val().trim();
+      const ok =
+        (original === "" && current === "") ||
+        original.toLowerCase() === current.toLowerCase();
+      if (ok) {
+        $input.removeClass("is-invalid").addClass("is-valid");
+        $input.closest(".form-floating").find(".invalid-feedback").text("");
       } else {
-        nextIndex = (currentIndex + 1) % $inputs.length;
+        $input.removeClass("is-valid").addClass("is-invalid");
+        $input
+          .closest(".form-floating")
+          .find(".invalid-feedback")
+          .text(`Valor esperado: "${original}"`);
       }
-
-      $inputs.eq(nextIndex).focus();
+      return ok;
     }
-  });
 
-  function cleanScanValue(value) {
-    return (value || "")
-      .toString()
-      .trim()
-      .replace(/[\r\n\t]+/g, "")
-      .replace(/\s{2,}/g, " ");
-  }
+    function updateNextBtnState() {
+      const allValid =
+        $("#scanDataForm input:not([readonly])").length ===
+        $("#scanDataForm input.is-valid:not([readonly])").length;
+      $("#nextBtn").prop("disabled", !allValid);
+    }
 
+    function updateBlockCounters() {
+      $(".component-block").each(function () {
+        const $block = $(this);
+        const inputs = $block.find("input:not([readonly])");
+        const correct = inputs.filter(".is-valid").length;
+        const incorrect = inputs.filter(".is-invalid").length;
+        const pending = inputs.length - correct - incorrect;
+        $block.find(".block-correct").text(correct);
+        $block.find(".block-pending").text(incorrect + pending);
+      });
+    }
 
-  /* ================= actualizar contadores por bloque ================= */
-  function updateBlockCounters() {
-    $(".component-block").each(function () {
-      const $block = $(this);
-      const inputs = $block.find("input:not([readonly])");
-      const correct = inputs.filter(".is-valid").length;
-      const incorrect = inputs.filter(".is-invalid").length;
-      const pending = inputs.length - correct - incorrect;
+    function updateGlobalCounters() {
+      const totalInputs = $("#scanDataForm input:not([readonly])").length;
+      const totalCorrect = $(
+        "#scanDataForm input.is-valid:not([readonly])"
+      ).length;
+      const totalError = $(
+        "#scanDataForm input.is-invalid:not([readonly])"
+      ).length;
+      const totalPending = totalInputs - totalCorrect - totalError;
+      $("#totalComponentsScanned").text(totalCorrect);
+      $("#pendingComponents").text(totalError + totalPending);
+    }
 
-      $block.find(".block-correct").text(correct);
-      $block.find(".block-pending").text(incorrect + pending);
-    });
-  }
+    // ================== Resumen final ==================
+    function renderFinalSummary() {
+      const $tbody = $("#validationSummary");
+      $tbody.empty();
+      let totalCorrect = 0,
+        totalError = 0;
+      $(".component-block").each(function (i) {
+        const block = $(this);
+        const fields = {};
+        block.find("input").each(function () {
+          fields[$(this).data("field")] = $(this).val();
+        });
+        const correct = block.find("input.is-invalid").length === 0;
+        const statusBadge = correct
+          ? `<span class="badge bg-success">OK</span>`
+          : `<span class="badge bg-danger">Error</span>`;
+        if (correct) totalCorrect++;
+        else totalError++;
+        $tbody.append(`<tr>
+      <td>${i + 1}</td>
+      <td>${fields["Asset_Tag"] || "-"}</td>
+      <td>${fields["Comp S/N"] || "-"}</td>
+      <td>${fields["MAC0"] || "-"}</td>
+      <td>${statusBadge}</td>
+    </tr>`);
+      });
+      $("#totalComponentsScannedFinal").text(totalCorrect);
+      $("#pendingComponentsFinal").text(totalError);
+    }
 
-  /* ================= actualizar contadores globales ================= */
-  function updateGlobalCounters() {
-    const totalInputs = $("#scanDataForm input:not([readonly])").length;
-    const totalCorrectos = $(
-      "#scanDataForm input.is-valid:not([readonly])"
-    ).length;
-    const totalErrores = $(
-      "#scanDataForm input.is-invalid:not([readonly])"
-    ).length;
-    const totalPendientes = totalInputs - totalCorrectos - totalErrores;
-
-    $("#totalComponentsScanned").text(totalCorrectos);
-    $("#pendingComponents").text(totalErrores + totalPendientes);
-  }
-
-  function renderFinalSummary() {
-    const $tbody = $("#validationSummary");
-    $tbody.empty();
-
-    let totalCorrect = 0;
-    let totalError = 0;
-
-    $(".component-block").each(function (i) {
-      const block = $(this);
-      const fields = {};
-      block.find("input").each(function () {
-        const key = $(this).data("field");
-        fields[key] = $(this).val();
+    // ================== Export XLSX ==================
+    $("#exportSummaryBtn")
+      .off("click")
+      .on("click", function () {
+        const data = [];
+        $("#validationSummary tr").each(function () {
+          const row = [];
+          $(this)
+            .find("td")
+            .each(function () {
+              row.push($(this).text());
+            });
+          if (row.length) data.push(row);
+        });
+        if (!data.length) {
+          alert("No hay datos para exportar.");
+          return;
+        }
+        const ws = XLSX.utils.aoa_to_sheet([
+          ["#", "Asset Tag", "Comp S/N", "MAC0", "Estado"],
+          ...data,
+        ]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Resumen");
+        XLSX.writeFile(wb, "ResumenComponentes.xlsx");
       });
 
-      const correct = block.find("input.is-invalid").length === 0;
-      const statusBadge = correct
-        ? `<span class="badge bg-success">OK</span>`
-        : `<span class="badge bg-danger">Error</span>`;
-
-      if (correct) totalCorrect++;
-      else totalError++;
-
-      $tbody.append(`
-      <tr>
-        <td>${i + 1}</td>
-        <td>${fields["Asset_Tag"] || "-"}</td>
-        <td>${fields["Comp S/N"] || "-"}</td>
-        <td>${fields["MAC0"] || "-"}</td>
-        <td>${statusBadge}</td>
-      </tr>
-    `);
-    });
-
-    $("#totalComponentsScannedFinal").text(totalCorrect);
-    $("#pendingComponentsFinal").text(totalError);
-  }
-  renderFinalSummary();
-
-  // ================== Exportar XLSX ==================
-  $("#exportSummaryBtn")
-    .off("click")
-    .on("click", function () {
-      const data = [];
-      $("#validationSummary tr").each(function () {
-        const row = [];
-        $(this)
-          .find("td")
-          .each(function () {
-            row.push($(this).text());
-          });
-        if (row.length) data.push(row);
+    // ================== Botones ==================
+    $("#goBackToEdit")
+      .off("click")
+      .on("click", function (e) {
+        e.preventDefault(); /* retroceder wizard */
       });
-
-      if (!data.length) {
-        alert("No hay datos para exportar.");
+    $("#confirmFinish")
+      .off("click")
+      .on("click", function () {
+        alert("✅ Proceso finalizado correctamente.");
+      });
+    $("#nextBtn").on("click", () => initStep2());
+    $(document).on("click", "#actionToScanBtn", function () {
+      if (dataCombined.length === 0) {
+        alert("Primero debes cargar y procesar los datos del Excel.");
         return;
       }
-
-      const ws = XLSX.utils.aoa_to_sheet([
-        ["#", "Asset Tag", "Comp S/N", "MAC0", "Estado"],
-        ...data,
-      ]);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Resumen");
-      XLSX.writeFile(wb, "ResumenComponentes.xlsx");
+      renderScanForm(dataCombined);
     });
-
-  // ================== Botón volver a editar ==================
-  $("#goBackToEdit")
-    .off("click")
-    .on("click", function (e) {
-      e.preventDefault();
-      console.log(e);
-      // ejemplo: retroceder al step 2 del wizard
-      // $currentStep = $currentStep - 1;
-      // showStep($currentStep);
-    });
-
-  // ================== Botón finalizar ==================
-  $("#confirmFinish")
-    .off("click")
-    .on("click", function () {
-      alert("✅ Proceso finalizado correctamente.");
-      // Aquí podrías limpiar el wizard, guardar datos en DB, etc.
-    });
+  });
 });
