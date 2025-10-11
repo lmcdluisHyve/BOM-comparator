@@ -68,6 +68,9 @@
             <div class="ms-auto">
               <small class="fw-bold">WO: <span id="woLabel" class="badge text-bg-white bg-success ms-2"></span></small>
             </div>
+            <div class="ms-auto">
+              <small class="fw-bold">Escaneado por: <span id="scanByLabel" class="badge text-bg-white bg-success ms-2"></span></small>
+            </div>
             <div class="ms-auto mt-4">
               <button class="btn-scan" type="button" data-bs-toggle="offcanvas" data-bs-target="#scanForm" role="button"
                 id="actionToScanBtn" aria-controls="scanForm"><svg  xmlns="http://www.w3.org/2000/svg"
@@ -138,17 +141,17 @@
     <div class="offcanvas-body">
       <div class="row p-4 align-items-center">
         <div class="col-3 mb-3">
-          <small>Rack AT:<span id="atRackLabelInternal" class="badge text-bg-white bg-success ms-2"></span></small>
+          <small class="fw-bold">Rack AT:<span id="atRackLabelInternal" class="badge text-bg-white bg-success ms-2"></span></small>
         </div>
         <div class="col mb-3">
-          <small>Total Comp.: <span id="totalComponents" class="badge text-bg-white bg-success ms-2"></span></small>
+          <small class="fw-bold">Total Comp.: <span id="totalComponents" class="badge text-bg-white bg-success ms-2"></span></small>
         </div>
         <div class="col mb-3">
-          <small>Labels escaneados: <span id="totalComponentsScanned"
+          <small class="fw-bold">Labels escaneados: <span id="totalComponentsScanned"
               class="badge text-bg-white bg-success ms-2">0</span></small>
         </div>
         <div class="col mb-3">
-          <small>Labels pendientes/error: <span id="pendingComponents"
+          <small class="fw-bold">Labels pendientes/error: <span id="pendingComponents"
               class="badge text-bg-white bg-success ms-2">0</span></small>
         </div>
         <hr />

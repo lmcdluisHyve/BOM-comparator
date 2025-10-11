@@ -6,10 +6,9 @@ $(document).ready(function () {
       return;
     }
 
+    const rangoDefault = "A1:C50"; // o el rango que desees por defecto
     let rangoUsuario = $("#excelRange").val().trim();
     let rangoFinal = rangoUsuario !== "" ? rangoUsuario : rangoDefault;
-    const rangoDefault = "A1:C50"; // o el rango que desees por defecto
-
 
     let lector = new FileReader();
     lector.onload = function (e) {
@@ -293,6 +292,8 @@ $(document).ready(function () {
     // -------------------------
     // STEP 2: RENDERIZAR TABLA CON CATEGORY
     // -------------------------
+    let dataCombined = [];
+
     function initStep2() {
       const $table = $("#mappedTable");
       const storedData = JSON.parse(localStorage.getItem("excelData")) || [];
@@ -315,6 +316,7 @@ $(document).ready(function () {
         "Comp S/N",
         "Asset_Tag",
         "MAC0",
+        "PSC",
         "Component PN",
         "Category",
       ];
@@ -358,15 +360,12 @@ $(document).ready(function () {
         .done(function (arrayToFind) {
           function cleanString(str) {
             return (str || "")
-              .toString()
-              .normalize("NFKD")
-              .replace(/[\s'"`]+/g, "") // elimina espacios y comillas
-              .replace(/[\u200B-\u200D\uFEFF]/g, "") // caracteres invisibles
+              .trim()
               .toLowerCase();
           }
 
           // Combinar datos con categoría
-          const dataCombined = dataOrdered.map((itemOrigin) => {
+          dataCombined = dataOrdered.map((itemOrigin) => {
             const valueToFind = cleanString(itemOrigin["Component PN"]);
 
             const foundValue = arrayToFind.find((itemToFind) => {
@@ -376,8 +375,10 @@ $(document).ready(function () {
             return {
               ...itemOrigin,
               Category: foundValue ? foundValue["Category"] : "Not found",
+              MAC1: itemOrigin["MAC1"] ?? "",
             };
           });
+          console.log("data combined", dataCombined)
 
           // Renderizar tabla
           let html = "<thead><tr>";
@@ -385,14 +386,25 @@ $(document).ready(function () {
           html += "</tr></thead><tbody>";
 
           dataCombined.forEach((row) => {
-            html += "<tr>";
-            columnasDeseadas.forEach(
-              (col) => (html += `<td>${row[col] ?? ""}</td>`)
-            );
-            html += "</tr>";
+          html += "<tr>";
+          columnasDeseadas.forEach((col) => {
+            let value = row[col] ?? "";
+
+            // 🔹 Si la categoría es "Power Shelf" y la columna es MAC0 → usamos MAC1
+            if (col === "MAC0" && row["Category"] === "Power Shelf") {
+              value = row["MAC1"] ?? "";
+            }
+
+            // 🔹 No mostrar PSC si está vacío
+            if (col === "PSC" && (value === null || value === "")) value = "";
+
+            html += `<td>${escapeTemplateString(value)}</td>`;
           });
+          html += "</tr>";
+        });
 
           html += "</tbody>";
+
           $table.html(html);
 
           insertDataHeader(dataCombined);
@@ -402,6 +414,7 @@ $(document).ready(function () {
           );
 
           function insertDataHeader(data) {
+            const lastItem = data.length - 1;
             $("#atRackLabel, #atRackLabelInternal").html(
               `<i class="bi bi-tag me-2"></i> ${data[0]["Sys AT"] ?? ""}`
             );
@@ -416,6 +429,11 @@ $(document).ready(function () {
             $("#woLabel").html(
               `<i class="bi bi-tag me-2"></i> ${data[0]["WO#"] ?? ""}`
             );
+            $("#scanByLabel").html(
+              `<i class="bi bi-person-bounding-box me-2"></i> ${
+                data[lastItem]["Worker Name"] ?? ""
+              }`
+            );
           }
         })
         .fail(function (jqxhr, textStatus, error) {
@@ -429,7 +447,7 @@ $(document).ready(function () {
   });
 
   $(document).on("click", "#actionToScanBtn", function () {
-    renderScanForm();
+    renderScanForm(dataCombined);
   });
 
   /* ================= utilidades de normalización/comparación ================= */
@@ -465,46 +483,35 @@ $(document).ready(function () {
     return o === c;
   }
 
+  function escapeTemplateString(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/`/g, "\\`")   // Escapa backticks
+    .replace(/\$/g, "\\$"); // Escapa signos $
+}
+
   /* ========================= render + validación ============================ */
-function renderScanForm() {
+   function renderScanForm(data) {
+  const fields = ["Asset_Tag", "Comp S/N", "MAC0", "PSC"];
   const $scanDataFormRow = $("#scanDataFormRow");
   $scanDataFormRow.empty();
 
-  const stored = localStorage.getItem("dataWithCategory");
-  if (!stored) {
-    $scanDataFormRow.html(`
-      <div class="alert alert-warning text-center w-100">
-        <i class="bi bi-exclamation-triangle me-2"></i>
-        No se encontró información en localStorage (dataWithCategory).
-      </div>
-    `);
-    return;
-  }
-
-  const data = JSON.parse(stored);
-  if (!Array.isArray(data) || data.length === 0) {
-    $scanDataFormRow.html(`
-      <div class="alert alert-warning text-center w-100">
-        No hay registros para renderizar.
-      </div>
-    `);
-    return;
-  }
-
-  const fields = ["Asset_Tag", "Comp S/N", "MAC0"];
-
   data.forEach((record, index) => {
-    console.log(record)
-    const subLocText = record["Sub Loc"] && record["Sub Loc"] !== "0"
-      ? ` - Sub Loc ${record["Sub Loc"]}` : "";
+    const subLocText =
+      record["Sub Loc"] && record["Sub Loc"] !== "0"
+        ? ` - Sub Loc ${escapeTemplateString(record["Sub Loc"])}`
+        : "";
+
+    const safeCategory = escapeTemplateString(record["Category"]);
+    const loc = escapeTemplateString(record["Loc"]);
 
     const $formBlock = $(`
-      <div class="rounded p-3 mb-4 bg-white shadow-sm border-start border-primary border-5">
+      <div class="rounded p-3 mb-4 bg-white shadow-sm border-start border-primary border-5 component-block">
         <h6 class="text-primary mb-3">
           <i class="bi bi-cpu me-2"></i>
-          Posicion # ${record["Loc"]} ${subLocText}
-          <span class="ms-2 badge bg-success bg-text-white rounded-pill text-uppercase">
-            ${record["Category"]}
+          Posición # ${loc}${subLocText}
+          <span class="ms-2 badge bg-success text-white rounded-pill text-uppercase">
+            ${safeCategory}
           </span>
         </h6>
         <div class="row" id="formFields_${index}"></div>
@@ -513,12 +520,21 @@ function renderScanForm() {
 
     const $fieldsContainer = $formBlock.find(`#formFields_${index}`);
 
-    fields.forEach(key => {
-      const originalValue = record[key] ?? "";
+    fields.forEach((key) => {
+      let value =
+        key === "MAC0" && record["Category"] === "Power Shelf"
+          ? record["MAC1"] ?? ""
+          : record[key] ?? "";
+
+      if (!value) return;
+
+      const isEmpty = !value;
       const safeKey = key.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
       const inputId = `${safeKey}_${index}`;
-      const isEmpty = originalValue === null || originalValue === "";
-      const labelEmpty = `${key} - N/A`
+      const labelEmpty = `${key} - N/A`;
+
+      value = escapeTemplateString(value);
+
       const $field = $(`
         <div class="col-md-4">
           <div class="form-floating mb-3">
@@ -531,7 +547,7 @@ function renderScanForm() {
               ${isEmpty ? "readonly" : ""}
               data-field="${key}"
               data-index="${index}"
-              data-original="${originalValue || ""}"
+              data-original="${value}"
             />
             <label for="${inputId}">${isEmpty ? labelEmpty : key}</label>
             <small class="invalid-feedback"></small>
@@ -545,46 +561,71 @@ function renderScanForm() {
     $scanDataFormRow.append($formBlock);
   });
 
-  // ------------------ Foco automático al abrir offcanvas ------------------
-  $(document).on("shown.bs.offcanvas", "#scanForm", function () {
-    const $firstEditable = $(this).find("input:visible:not([readonly])").first();
-    if ($firstEditable.length) {
-      $firstEditable.focus().select();
-      console.log("🟢 Primer input editable enfocado:", $firstEditable.attr("id"));
-    }
-  });
-
-  // ------------------ Saltar al siguiente input editable ------------------
-  // Saltar al siguiente input editable y validar en tiempo real
-$("#scanDataForm").on("input", "input", function () {
-  const $this = $(this);
-  clearTimeout($this.data("scan-timeout"));
-
-  const timeout = setTimeout(() => {
-    // 1️⃣ Validar este input en tiempo real (sin alert)
-    validateSingleInput($this, false);
-
-    // 2️⃣ Avanzar al siguiente input editable si no es readonly
-    const val = $this.val().trim();
-    if (val === "" || $this.prop("readonly")) return;
-
-    const $editableInputs = $("#scanDataForm input:visible:not([readonly])");
-    const currentIndex = $editableInputs.index($this);
-    if (currentIndex === -1) return;
-
-    const nextIndex = currentIndex + 1;
-    if (nextIndex < $editableInputs.length) {
-      $editableInputs.eq(nextIndex).focus().select();
-    }
-  }, 150);
-
-  $this.data("scan-timeout", timeout);
-});
-
-
-  console.log(`✅ Renderizados ${data.length} bloques con ${fields.length} campos cada uno.`);
+  console.log(
+    `✅ Renderizados ${data.length} bloques con ${fields.length} campos cada uno.`
+  );
 }
 
+    // ------------------ Foco automático al abrir offcanvas ------------------
+    $(document).on("shown.bs.offcanvas", "#scanForm", function () {
+      const $firstEditable = $(this)
+        .find("input:visible:not([readonly])")
+        .first();
+      if ($firstEditable.length) {
+        $firstEditable.focus().select();
+        console.log(
+          "🟢 Primer input editable enfocado:",
+          $firstEditable.attr("id")
+        );
+      }
+    });
+
+    // ------------------ Saltar al siguiente input editable ------------------
+    // Saltar al siguiente input editable y validar en tiempo real
+     $("#scanDataForm input").on("input", function () {
+    const $this = $(this);
+    validateSingleInput($this);
+    updateNextBtnState();
+  });
+
+  function validateSingleInput($input) {
+    const key = $input.data("field");
+    const original = $input.data("original") ?? "";
+    const current = $input.val().trim();
+
+    // 🔹 Validación simple: igual al valor original
+    const ok =
+      (original === "" && current === "") || original.toLowerCase() === current.toLowerCase();
+
+    if (ok) {
+      $input.removeClass("is-invalid").addClass("is-valid");
+      $input.closest(".form-floating").find(".invalid-feedback").text("");
+    } else {
+      $input.removeClass("is-valid").addClass("is-invalid");
+      $input
+        .closest(".form-floating")
+        .find(".invalid-feedback")
+        .text(`Valor esperado: "${original}"`);
+    }
+    return ok;
+  }
+
+    console.log(
+      `✅ Renderizados ${data.length} bloques con ${fields.length} campos cada uno.`
+    );
+  // }
+
+  function updateNextBtnState() {
+    const allValid = $("#scanDataForm input:not([readonly])").length ===
+      $("#scanDataForm input.is-valid:not([readonly])").length;
+
+    $("#nextBtn").prop("disabled", !allValid);
+  }
+
+  // Inicializamos estado del botón
+  updateNextBtnState();
+  
+// }
 
   // Detecta cuando un input recibe texto (escaneo)
   $("#scanDataForm").on("input", "input", function () {
@@ -632,39 +673,6 @@ $("#scanDataForm").on("input", "input", function () {
       .replace(/\s{2,}/g, " ");
   }
 
-  /* ================= validación de un input ================= */
-  function validateSingleInput($input, showAlert = false) {
-    const key = $input.data("field");
-    const original = $input.data("original") ?? "";
-    const current = cleanScanValue($input.val()) ?? "";
-
-    const ok = valuesEqual(original, current, key);
-
-    // Ajustar clases visuales Bootstrap
-    if (ok) {
-      $input.removeClass("is-invalid").addClass("is-valid");
-      $input.closest(".form-floating").find(".invalid-feedback").text("");
-    } else {
-      $input.removeClass("is-valid").addClass("is-invalid");
-      const expectedDisplay = original === "" ? "(vacío)" : String(original);
-      $input
-        .closest(".form-floating")
-        .find(".invalid-feedback")
-        .text(`Valor esperado: "${expectedDisplay}"`);
-
-      // ❌ El alert solo se permite si se llama con showAlert = true
-      if (showAlert === true) {
-        console.warn(
-          `❌ Diferencia detectada en ${key}: esperado "${original}", recibido "${current}"`
-        );
-      }
-    }
-
-    updateBlockCounters();
-    updateGlobalCounters();
-
-    return ok;
-  }
 
   /* ================= actualizar contadores por bloque ================= */
   function updateBlockCounters() {
@@ -768,7 +776,7 @@ $("#scanDataForm").on("input", "input", function () {
     .off("click")
     .on("click", function (e) {
       e.preventDefault();
-      console.log(e)
+      console.log(e);
       // ejemplo: retroceder al step 2 del wizard
       // $currentStep = $currentStep - 1;
       // showStep($currentStep);
