@@ -338,17 +338,6 @@ $(document).ready(function () {
         return;
       }
 
-      const columnasDeseadas = [
-        "Loc",
-        "Sub Loc",
-        "Comp S/N",
-        "Asset_Tag",
-        "MAC0",
-        "PSC",
-        "Component PN",
-        "Category",
-      ];
-
       function orderByFields(a, b) {
         const orderFirst = { columna: "Loc", descenting: true };
         const orderSecond = { columna: "Sub Loc", descenting: true };
@@ -431,7 +420,7 @@ $(document).ready(function () {
         html += "<tr>";
         columnasDeseadas.forEach((col) => {
           let value = row[col] ?? "";
-          if (col === "MAC0" && row["Category"] === "Power shelf")
+          if (col === "MAC0" && row["Category"].toLowerCase() === "power shelf")
             value = row["MAC1"] ?? "";
           html += `<td>${escapeTemplateString(value)}</td>`;
         });
@@ -491,10 +480,10 @@ $(document).ready(function () {
         const $fieldsContainer = $formBlock.find(`#formFields_${index}`);
 
         fields.forEach((key) => {
-          let value =
-            key === "MAC0" && record["Category"] === "Power shelf"
-              ? record["MAC1"] ?? ""
-              : record[key] ?? "";
+          let value = record[key] ?? "";
+          
+            if(key==="MAC0" && record["Category"] && record["Category"].toLowerCase()==="power shelf") {
+    value = record["MAC1"] ?? "";}
           const isEmpty = !value;
 
           if (key === "PSC" && isEmpty || key !== "PSC" && isEmpty) return;
