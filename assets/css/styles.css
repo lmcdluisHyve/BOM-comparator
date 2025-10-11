@@ -101,3 +101,61 @@ border: 1px solid rgba(255, 255, 255, 0.3);
   background-color: #666666;
   color: #fff;
 }
+
+/* Button Scan */
+/* From Uiverse.io by vinodjangid07 */ 
+.btn-scan {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #0d6efd;
+  border: none;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.164);
+  cursor: pointer;
+  transition-duration: .3s;
+  overflow: hidden;
+  position: relative;
+}
+
+.svgIcon {
+  width: 20px;
+  transition-duration: .3s;
+}
+
+.svgIcon path {
+  fill: white;
+}
+
+.btn-scan:hover {
+  width: 140px;
+  border-radius: 50px;
+  transition-duration: .3s;
+  background-color: #0b47a0;
+  align-items: center;
+}
+
+.btn-scan:hover .svgIcon {
+  width: 50px;
+  transition-duration: .3s;
+  transform: translateY(60%);
+}
+
+.btn-scan::before {
+  position: absolute;
+  top: -20px;
+  content: "Start Scan";
+  color: white;
+  transition-duration: .3s;
+  font-size: 2px;
+}
+
+.btn-scan:hover::before {
+  font-size: 13px;
+  opacity: 1;
+  transform: translateY(30px);
+  transition-duration: .3s;
+}

@@ -8,6 +8,8 @@ $(document).ready(function () {
 
     let rangoUsuario = $("#excelRange").val().trim();
     let rangoFinal = rangoUsuario !== "" ? rangoUsuario : rangoDefault;
+    const rangoDefault = "A1:C50"; // o el rango que desees por defecto
+
 
     let lector = new FileReader();
     lector.onload = function (e) {
@@ -25,7 +27,7 @@ $(document).ready(function () {
       });
 
       // Convertir a objeto
-      datosExcel = rango.map((fila) => ({
+      let datosExcel = rango.map((fila) => ({
         Columna1: fila[0],
         Columna2: fila[1],
         Columna3: fila[2],
@@ -252,7 +254,7 @@ $(document).ready(function () {
 
     $(document).on("click", "#btnSelect", function (e) {
       e.preventDefault();
-      const $wrapper = $(this).closest("file-input-container");
+      const $wrapper = $(this).closest(".file-input-container");
       const $fileInput = $wrapper.find(".file-input");
       if ($fileInput.length === 0) {
         console.error("No se encontró el input de archivo.");
@@ -405,6 +407,15 @@ $(document).ready(function () {
             );
             $("#totalComponents, #totalComponentsLabel").text(data.length);
             $("#projectName").text(data[0]["Project"]);
+            $("#snLabel").html(
+              `<i class="bi bi-tag me-2"></i> ${data[0]["Ser No"] ?? ""}`
+            );
+            $("#skuLabel").html(
+              `<i class="bi bi-tag me-2"></i> ${data[0]["Part#"] ?? ""}`
+            );
+            $("#woLabel").html(
+              `<i class="bi bi-tag me-2"></i> ${data[0]["WO#"] ?? ""}`
+            );
           }
         })
         .fail(function (jqxhr, textStatus, error) {
@@ -483,6 +494,7 @@ function renderScanForm() {
   const fields = ["Asset_Tag", "Comp S/N", "MAC0"];
 
   data.forEach((record, index) => {
+    console.log(record)
     const subLocText = record["Sub Loc"] && record["Sub Loc"] !== "0"
       ? ` - Sub Loc ${record["Sub Loc"]}` : "";
 
@@ -506,7 +518,7 @@ function renderScanForm() {
       const safeKey = key.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
       const inputId = `${safeKey}_${index}`;
       const isEmpty = originalValue === null || originalValue === "";
-
+      const labelEmpty = `${key} - N/A`
       const $field = $(`
         <div class="col-md-4">
           <div class="form-floating mb-3">
@@ -521,7 +533,7 @@ function renderScanForm() {
               data-index="${index}"
               data-original="${originalValue || ""}"
             />
-            <label for="${inputId}">${key}</label>
+            <label for="${inputId}">${isEmpty ? labelEmpty : key}</label>
             <small class="invalid-feedback"></small>
           </div>
         </div>
@@ -720,6 +732,7 @@ $("#scanDataForm").on("input", "input", function () {
     $("#totalComponentsScannedFinal").text(totalCorrect);
     $("#pendingComponentsFinal").text(totalError);
   }
+  renderFinalSummary();
 
   // ================== Exportar XLSX ==================
   $("#exportSummaryBtn")
@@ -753,10 +766,12 @@ $("#scanDataForm").on("input", "input", function () {
   // ================== Botón volver a editar ==================
   $("#goBackToEdit")
     .off("click")
-    .on("click", function () {
+    .on("click", function (e) {
+      e.preventDefault();
+      console.log(e)
       // ejemplo: retroceder al step 2 del wizard
-      $currentStep = 2;
-      showStep($currentStep);
+      // $currentStep = $currentStep - 1;
+      // showStep($currentStep);
     });
 
   // ================== Botón finalizar ==================

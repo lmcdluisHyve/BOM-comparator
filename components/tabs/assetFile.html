@@ -49,19 +49,33 @@
 
         <!-- Paso 2 -->
         <div class="step-content" data-step="2">
-          <div class="d-flex">
-            <h5>Datos de Rack AT:<span id="atRackLabel" class="badge text-bg-white bg-success ms-2"></span></h5>
+          <hr />
+          <div class="d-flex align-items-center justify-content-center">
+            <small class="fw-bold">Rack AT:<span id="atRackLabel" class="badge text-bg-white bg-success ms-2"></small></h5>
             <div class="ms-auto">
-              <h5>Total Componentes: <span id="totalComponentsLabel" class="badge text-bg-white bg-success ms-2"></span></h5>
+              <small class="fw-bold">Total Componentes: <span id="totalComponentsLabel" class="badge text-bg-white bg-success ms-2"></span>
+              </small>
             </div>
             <div class="ms-auto">
-              <h5>Proyecto: <span id="projectName" class="badge text-bg-white bg-success ms-2"></span></h5>
+              <small class="fw-bold">Proyecto: <span id="projectName" class="badge text-bg-white bg-success ms-2"></span></small>
             </div>
             <div class="ms-auto">
-              <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#scanForm" role="button" id="actionToScanBtn"
-                aria-controls="scanForm"><i class="bi bi-upc me-2"></i>Iniciar Scan</button>
+               <small class="fw-bold">SN:<span id="snLabel" class="badge text-bg-white bg-success ms-2"></span></small>
             </div>
-            
+          </div>
+          <div class="d-flex mt-2 align-items-center justify-content-center">
+              <small class="fw-bold">SKU: <span id="skuLabel" class="badge text-bg-white bg-success ms-2"></span></small>
+            <div class="ms-auto">
+              <small class="fw-bold">WO: <span id="woLabel" class="badge text-bg-white bg-success ms-2"></span></small>
+            </div>
+            <div class="ms-auto mt-4">
+              <button class="btn-scan" type="button" data-bs-toggle="offcanvas" data-bs-target="#scanForm" role="button"
+                id="actionToScanBtn" aria-controls="scanForm"><svg  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor" class="bi bi-upc-scan svgIcon" viewBox="0 0 16 16">
+                  <path
+                    d="M1.5 1a.5.5 0 0 0-.5.5v3a.5.5 0 0 1-1 0v-3A1.5 1.5 0 0 1 1.5 0h3a.5.5 0 0 1 0 1zM11 .5a.5.5 0 0 1 .5-.5h3A1.5 1.5 0 0 1 16 1.5v3a.5.5 0 0 1-1 0v-3a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 1-.5-.5M.5 11a.5.5 0 0 1 .5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 1 0 1h-3A1.5 1.5 0 0 1 0 14.5v-3a.5.5 0 0 1 .5-.5m15 0a.5.5 0 0 1 .5.5v3a1.5 1.5 0 0 1-1.5 1.5h-3a.5.5 0 0 1 0-1h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 1 .5-.5M3 4.5a.5.5 0 0 1 1 0v7a.5.5 0 0 1-1 0zm2 0a.5.5 0 0 1 1 0v7a.5.5 0 0 1-1 0zm2 0a.5.5 0 0 1 1 0v7a.5.5 0 0 1-1 0zm2 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5zm3 0a.5.5 0 0 1 1 0v7a.5.5 0 0 1-1 0z" />
+                </svg></button>
+            </div>
           </div>
           <hr />
           <div class="table-responsive">
@@ -71,39 +85,38 @@
 
         <!-- Paso 3 -->
         <div class="step-content" data-step="3">
-          <h5>Confirmación</h5>
           <div id="wizardStepFinal">
-  <h5 class="mb-3 fw-bold">Resumen de Validación</h5>
+            <h5 class="mb-3 fw-bold">Resumen de Validación</h5>
 
-  <div class="table-responsive mb-3">
-    <table class="table table-sm table-bordered align-middle">
-      <thead class="table-light">
-        <tr>
-          <th>#</th>
-          <th>Asset Tag</th>
-          <th>Comp S/N</th>
-          <th>MAC0</th>
-          <th>Estado</th>
-        </tr>
-      </thead>
-      <tbody id="validationSummary"></tbody>
-    </table>
-  </div>
+            <div class="table-responsive mb-3">
+              <table class="table table-sm table-bordered align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th>#</th>
+                    <th>Asset Tag</th>
+                    <th>Comp S/N</th>
+                    <th>MAC0</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="validationSummary"></tbody>
+              </table>
+            </div>
 
-  <div class="d-flex justify-content-between">
-    <div>
-      <span class="badge bg-success">Correctos: <span id="totalComponentsScannedFinal">0</span></span>
-      <span class="badge bg-danger ms-2">Pendientes/Error: <span id="pendingComponentsFinal">0</span></span>
-    </div>
-    <div>
-      <button class="btn btn-secondary me-2" id="goBackToEdit">Volver a Editar</button>
-      <button class="btn btn-outline-success" id="exportSummaryBtn">
-        <i class="bi bi-file-earmark-arrow-down"></i> Exportar Reporte
-      </button>
-      <button class="btn btn-success" id="confirmFinish">Confirmar y Finalizar</button>
-    </div>
-  </div>
-</div>
+            <div class="d-flex justify-content-between">
+              <div>
+                <span class="badge bg-success">Correctos: <span id="totalComponentsScannedFinal">0</span></span>
+                <span class="badge bg-danger ms-2">Pendientes/Error: <span id="pendingComponentsFinal">0</span></span>
+              </div>
+              <div>
+                <button type="button" class="btn btn-secondary me-2" id="goBackToEdit">Volver a Editar</button>
+                <button type="button" class="btn btn-outline-success" id="exportSummaryBtn">
+                  <i class="bi bi-file-earmark-arrow-down"></i> Exportar Reporte
+                </button>
+                <button type="button" class="btn btn-success" id="confirmFinish">Confirmar y Finalizar</button>
+              </div>
+            </div>
+          </div>
 
         </div>
 
@@ -118,24 +131,27 @@
   <div class="offcanvas offcanvas-start bg-light w-75" tabindex="-1" id="scanForm" aria-labelledby="ScanFormTitle"
     data-bs-scroll="true">
     <div class="offcanvas-header">
-      <h5 class="offcanvas-title" id="ScanFormTitle">Escanear Datos de los componentes<span class="ms-2"><i class="bi bi-motherboard"></i></span></h5>
+      <h5 class="offcanvas-title" id="ScanFormTitle">Escanear Datos de los componentes<span class="ms-2"><i
+            class="bi bi-motherboard"></i></span></h5>
       <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body">
       <div class="row p-4 align-items-center">
         <div class="col-3 mb-3">
-            <small>Rack AT:<span id="atRackLabelInternal" class="badge text-bg-white bg-success ms-2"></span></small>
+          <small>Rack AT:<span id="atRackLabelInternal" class="badge text-bg-white bg-success ms-2"></span></small>
         </div>
         <div class="col mb-3">
-            <small>Total Comp.: <span id="totalComponents" class="badge text-bg-white bg-success ms-2"></span></small>
+          <small>Total Comp.: <span id="totalComponents" class="badge text-bg-white bg-success ms-2"></span></small>
         </div>
         <div class="col mb-3">
-            <small>Labels escaneados: <span id="totalComponentsScanned" class="badge text-bg-white bg-success ms-2">0</span></small>
+          <small>Labels escaneados: <span id="totalComponentsScanned"
+              class="badge text-bg-white bg-success ms-2">0</span></small>
         </div>
         <div class="col mb-3">
-            <small>Labels pendientes/error: <span id="pendingComponents" class="badge text-bg-white bg-success ms-2">0</span></small>
+          <small>Labels pendientes/error: <span id="pendingComponents"
+              class="badge text-bg-white bg-success ms-2">0</span></small>
         </div>
-        <hr/>
+        <hr />
       </div>
       <form id="scanDataForm">
         <div class="row p-2" id="scanDataFormRow">
